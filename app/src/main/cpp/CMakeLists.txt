@@ -1,19 +1,31 @@
 cmake_minimum_required(VERSION 3.4.1)
 
-set(PIXMAN_DIR ../../../../../../pixman)
+set(FT_DIR ../../../../../freetype2)
+set(BUILD_SHARED_LIBS true)
+add_subdirectory(${FT_DIR} freetype)
+
+set(PIXMAN_DIR ../../../../../pixman)
 file(GLOB PIXMAN_SRC
         "${PIXMAN_DIR}/pixman/*.c"
         "${PIXMAN_DIR}/pixman/*.S"
         "${PIXMAN_DIR}/pixman/*.cpp")
 
-set(CAIRO_DIR ../../../../../../cairo)
+set(CAIRO_DIR ../../../../../cairo)
 file(GLOB CAIRO_SRC
         "${CAIRO_DIR}/src/*.c"
         "${CAIRO_DIR}/src/*.cpp")
 
+list(FILTER PIXMAN_SRC EXCLUDE REGEX .*pixman-region.c.*)
+list(FILTER PIXMAN_SRC EXCLUDE REGEX .*sse2.*)
+list(FILTER PIXMAN_SRC EXCLUDE REGEX .*sse3.*)
+list(FILTER PIXMAN_SRC EXCLUDE REGEX .*vmx.*)
+list(FILTER PIXMAN_SRC EXCLUDE REGEX .*pixman-mips-dspr2.c.*)
+list(FILTER PIXMAN_SRC EXCLUDE REGEX .*pixman-arm-simd.*)
+list(FILTER PIXMAN_SRC EXCLUDE REGEX .*pixman-arm-neon.*)
+
 list(FILTER CAIRO_SRC EXCLUDE REGEX .*-cogl.*)
 list(FILTER CAIRO_SRC EXCLUDE REGEX .*-directfb.*)
-list(FILTER CAIRO_SRC EXCLUDE REGEX .*-ft.*)
+#list(FILTER CAIRO_SRC EXCLUDE REGEX .*-ft.*)
 list(FILTER CAIRO_SRC EXCLUDE REGEX .*-glx.*)
 list(FILTER CAIRO_SRC EXCLUDE REGEX .*cairo-image-mask-compositor.*)
 list(FILTER CAIRO_SRC EXCLUDE REGEX .*cairo-gl-surface-legacy.*)
@@ -31,12 +43,16 @@ list(FILTER CAIRO_SRC EXCLUDE REGEX .*xml.*)
 list(FILTER CAIRO_SRC EXCLUDE REGEX .*wgl.*)
 list(FILTER CAIRO_SRC EXCLUDE REGEX .*beos.*)
 list(FILTER CAIRO_SRC EXCLUDE REGEX .*qt.*)
+list(FILTER CAIRO_SRC EXCLUDE REGEX .*svg.*)
+list(FILTER CAIRO_SRC EXCLUDE REGEX .*test-base-compositor-surface.c.*)
+list(FILTER CAIRO_SRC EXCLUDE REGEX .*cairo-type3-glyph-surface.c.*)
 #list(FILTER CAIRO_SRC EXCLUDE REGEX .*egl.*)
 #list(FILTER CAIRO_SRC EXCLUDE REGEX .*-gl-.*)
 
-#message(WARNING "CAIRO_SRC aaaaaaa ${CAIRO_SRC}")
+#message(WARNING "PIXMAN_SRC ${PIXMAN_SRC}")
+#message(WARNING "CAIRO_SRC ${CAIRO_SRC}")
 
-include_directories(${PIXMAN_DIR}/pixman ${CAIRO_DIR}/src include-extra)
+include_directories(${PIXMAN_DIR}/pixman ${CAIRO_DIR}/src include-extra ${FT_DIR}/include)
 
 #-D_USE_MATH_DEFINES -DPIXMAN_NO_TLS -DPACKAGE=\"android-cairo\" -DUSE_ARM_NEON -DUSE_ARM_SIMD -include \"limits.h\""
 #-DPACKAGE_VERSION="\"android-cairo\"" -DPACKAGE_BUGREPORT="\"http://github.com/anoek/android-cairo\"" -DCAIRO_NO_MUTEX=1 -DHAVE_STDINT_H -DHAVE_UINT64_T
@@ -49,6 +65,26 @@ set_target_properties(pixman PROPERTIES COMPILE_FLAGS ${PIXMAN_FLAGS})
 
 add_library(cairo SHARED ${CAIRO_SRC})
 set_target_properties(cairo PROPERTIES COMPILE_FLAGS ${CAIRO_FLAGS})
+target_link_libraries(cairo
+        freetype
+        pixman
+        EGL
+        GLESv2)
+
+#set(LIBFONT_DIR ../../../../../libfont)
+#file(GLOB LIBFONT_SRC
+#        "${LIBFONT_DIR}/jni/*.cpp")
+
+#message(WARNING "LIBFONT_SRC ${LIBFONT_SRC}")
+
+#add_library(libfont SHARED ${LIBFONT_SRC})
+#target_include_directories(libfont PUBLIC
+#        ${LIBFONT_DIR}/jni
+#        ${FT_DIR}/include)
+#target_link_libraries(libfont
+#        freetype
+#        GLESv1_CM
+#        log)
 
 add_library(main
         SHARED
@@ -60,6 +96,7 @@ target_include_directories(main PUBLIC
 
 target_link_libraries(main
         android
+        cairo
         EGL
         GLESv1_CM
         log)
