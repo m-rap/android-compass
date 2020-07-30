@@ -12,8 +12,10 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
             cmake {
-                arguments "-DANDROID_STL=c++_shared"
-                cppFlags ""
+                //arguments "-DANDROID_STL=c++_shared","-DANDROID_ALLOW_UNDEFINED_SYMBOLS=TRUE"
+                //arguments "-DANDROID_ALLOW_UNDEFINED_SYMBOLS=TRUE"
+                //cppFlags "-std=c++17"
+                //cppFlags ""
             }
         }
     }
@@ -35,7 +37,8 @@ android {
         abi {
             enable true
             reset()
-            include "x86", "x86_64", "armeabi-v7a", "arm64-v8a"
+            //include "x86", "x86_64", "armeabi-v7a", "arm64-v8a"
+            include "arm64-v8a"
             universalApk false
         }
     }
