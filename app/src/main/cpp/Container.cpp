@@ -9,14 +9,14 @@ int Container::initEgl() {
 
     const EGLint attribs[] = {
             EGL_SURFACE_TYPE,    EGL_WINDOW_BIT,
-            EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
             EGL_RED_SIZE,        8,
             EGL_GREEN_SIZE,      8,
             EGL_BLUE_SIZE,       8,
 
-            EGL_ALPHA_SIZE,   EGL_DONT_CARE,
-            EGL_DEPTH_SIZE,   16,
-            EGL_SAMPLES,      4,
+            EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT,
+//            EGL_ALPHA_SIZE,   EGL_DONT_CARE,
+//            EGL_DEPTH_SIZE,   16,
+//            EGL_SAMPLES,      4,
 
             EGL_NONE
     };
@@ -66,8 +66,8 @@ int Container::initEgl() {
 
     eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format);
     surface = eglCreateWindowSurface(display, config, app->window, NULL);
-    //context = eglCreateContext(display, config, NULL, NULL);
-    context = eglCreateContext(display, config, NULL, contextAttribs);
+    context = eglCreateContext(display, config, NULL, NULL);
+    //context = eglCreateContext(display, config, NULL, contextAttribs);
 
     if (eglMakeCurrent(display, surface, surface, context) == EGL_FALSE) {
         LOGI("Unable to eglMakeCurrent");
@@ -84,22 +84,24 @@ int Container::initEgl() {
 
     width = w;
     height = h;
-    display = display;
-    surface = surface;
-    context = context;
+    this->display = display;
+    this->surface = surface;
+    this->context = context;
 
     LOGI("w %d h %d", width, height);
 
-    cdt = cairo_egl_device_create(display, context);
-    crSurface = cairo_gl_surface_create_for_egl(cdt, surface, width, height);
+    //cdt = cairo_egl_device_create(display, context);
+    //crSurface = cairo_gl_surface_create_for_egl(cdt, surface, width, height);
+    //
+    //LOGI("cdt err: %s\nsurface: err %s",
+    //     cairo_status_to_string(cairo_device_status(cdt)),
+    //     cairo_status_to_string(cairo_surface_status(crSurface)));
+    //
+    //cr = cairo_create(crSurface);
+    //LOGI("cdt %08x surface %08x cr %08x", cdt, crSurface, cr);
+    //LOGI("cr w %d h %d", cairo_gl_surface_get_width(crSurface), cairo_gl_surface_get_height(crSurface));
 
-    LOGI("cdt err: %s\nsurface: err %s",
-         cairo_status_to_string(cairo_device_status(cdt)),
-         cairo_status_to_string(cairo_surface_status(crSurface)));
-
-    cr = cairo_create(crSurface);
-    LOGI("cdt %08x surface %08x cr %08x", cdt, crSurface, cr);
-    LOGI("cr w %d h %d", cairo_gl_surface_get_width(crSurface), cairo_gl_surface_get_height(crSurface));
+    initGl();
 
     running = true;
 
@@ -116,9 +118,11 @@ int Container::deinitEgl() {
     running = false;
     animating = false;
 
-    cairo_destroy(cr);
-    cairo_surface_destroy(crSurface);
-    cairo_device_destroy(cdt);
+    deinitGl();
+
+    //cairo_destroy(cr);
+    //cairo_surface_destroy(crSurface);
+    //cairo_device_destroy(cdt);
 
     eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     if (context != EGL_NO_CONTEXT) {
@@ -135,6 +139,70 @@ int Container::deinitEgl() {
 
     return 0;
 }
+
+void Container::initGl() {
+    glGenBuffers(1, &vbo);
+}
+
+void Container::deinitGl() {
+    glDeleteBuffers(1, &vbo);
+}
+
+void Container::addVtx(float x, float y) {
+    vtxBuffer[buffSize++] = x;
+    vtxBuffer[buffSize++] = y;
+    vtxBuffer[buffSize++] = 0;
+    vtxBuffer[buffSize++] = r;
+    vtxBuffer[buffSize++] = g;
+    vtxBuffer[buffSize++] = b;
+    vtxBuffer[buffSize++] = a;
+}
+
+void Container::rect(float x, float y, float width, float height) {
+    addVtx(x, y);
+    addVtx(x + width, y);
+    addVtx(x + width, y + height);
+
+    addVtx(x, y);
+    addVtx(x + width, y + height);
+    addVtx(x, y + height);
+}
+
+void Container::end() {
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, buffSize * sizeof(float), vtxBuffer, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+void Container::draw() {
+    //cairo_set_source_rgb(cr, 0.0, 0.0, 0.0);
+    //cairo_paint(cr);
+    //
+    //cairo_set_line_width(cr, 1);
+    //cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);
+    //cairo_rectangle(cr, 25, 25, 100, 100);
+    //cairo_stroke(cr);
+    ////cairo_fill(cr);
+    //cairo_surface_flush(crSurface);
+    //cairo_gl_surface_swapbuffers(crSurface);
+
+    buffSize = 0;
+    r = 255; g = 255; b = 255; a = 1;
+    //rect(25, 25, 100, 100);
+    rect(0.1, 0.1, 1, 1);
+    end();
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glVertexPointer(3, GL_FLOAT, sizeof(float) * 7, 0);
+    glColorPointer(4, GL_FLOAT, sizeof(float) * 7, (void*)(3 * sizeof(float)));
+    glDrawArrays(GL_TRIANGLES, 0, buffSize / 7);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    eglSwapBuffers(display, surface);
+}
+
+
 
 
 //int initEgl(Container& container1) {

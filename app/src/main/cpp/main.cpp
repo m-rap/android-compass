@@ -86,17 +86,7 @@ void android_main(struct android_app* state) {
 
         if (container.running && container.animating) {
 
-            cairo_set_source_rgb(container.cr, 0.0, 0.0, 0.0);
-            cairo_paint(container.cr);
-
-            cairo_set_line_width(container.cr, 1);
-            cairo_set_source_rgb(container.cr, 1.0, 1.0, 1.0);
-            cairo_rectangle(container.cr, 25, 25, 100, 100);
-            cairo_stroke(container.cr);
-            //cairo_fill(container.cr);
-            cairo_surface_flush(container.crSurface);
-            cairo_gl_surface_swapbuffers(container.crSurface);
-            //eglSwapBuffers(container.display, container.surface);
+            container.draw();
         }
 
         prevSecDiff = secDiff;
