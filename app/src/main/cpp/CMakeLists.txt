@@ -124,6 +124,8 @@ add_library(main
 target_include_directories(main PUBLIC
         ${ANDROID_NDK}/sources/android/native_app_glue)
 
+#set_target_properties(main PROPERTIES COMPILE_FLAGS "-Wno-c++11-narrowing")
+
 target_link_libraries(main
         android
 #        cairo

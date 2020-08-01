@@ -3,6 +3,7 @@
 //
 
 #include "Container.h"
+#include <math.h>
 
 int Container::initEgl() {
     LOGI("initEgl");
@@ -114,7 +115,7 @@ int Container::deinitEgl() {
     if (!running) {
         return 0;
     }
-    LOGI("deinitEgl");
+    //LOGI("deinitEgl");
     running = false;
     animating = false;
 
@@ -141,37 +142,78 @@ int Container::deinitEgl() {
 }
 
 void Container::initGl() {
+    //glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
+    //glEnable(GL_CULL_FACE);
+    glShadeModel(GL_SMOOTH);
+    glDisable(GL_DEPTH_TEST);
+
     glGenBuffers(1, &vbo);
+    glGenBuffers(1, &ibo);
 }
 
 void Container::deinitGl() {
     glDeleteBuffers(1, &vbo);
+    glDeleteBuffers(1, &ibo);
 }
 
 void Container::addVtx(float x, float y) {
-    vtxBuffer[buffSize++] = x;
-    vtxBuffer[buffSize++] = y;
-    vtxBuffer[buffSize++] = 0;
-    vtxBuffer[buffSize++] = r;
-    vtxBuffer[buffSize++] = g;
-    vtxBuffer[buffSize++] = b;
-    vtxBuffer[buffSize++] = a;
+    vtxBuffer[vtxBuffSize++] = {x, y, 0, r, g, b, a};
+}
+
+void Container::addTriangle(int* idx) {
+    if (idxBuffSize > 1024 - 3) {
+        return;
+    }
+    //addVtx(v[0][0], v[0][1]);
+    //addVtx(v[1][0], v[1][1]);
+    //addVtx(v[2][0], v[2][1]);
+
+    idxBuffer[idxBuffSize++] = idx[0];
+    idxBuffer[idxBuffSize++] = idx[1];
+    idxBuffer[idxBuffSize++] = idx[2];
 }
 
 void Container::rect(float x, float y, float width, float height) {
     addVtx(x, y);
     addVtx(x + width, y);
     addVtx(x + width, y + height);
-
-    addVtx(x, y);
-    addVtx(x + width, y + height);
     addVtx(x, y + height);
+
+    //float v1[][2] = {{x, y}, {x + width, y}, {x + width, y + height}};
+    int idx1[] = {vtxBuffSize - (GLushort)4, vtxBuffSize - (GLushort)3, vtxBuffSize - (GLushort)2};
+    addTriangle(idx1);
+
+    //float v2[][2] = {{x, y}, {x + width, y + height}, {x, y + height}};
+    int idx2[] = {vtxBuffSize - (GLushort)4, vtxBuffSize - (GLushort)2, vtxBuffSize - (GLushort)1};
+    addTriangle(idx2);
+}
+
+void Container::circle(float x, float y, float r) {
+    GLushort nSegments = 100;
+    addVtx(x, y);
+    for (int i = 0; i < nSegments; i++) {
+        double degree = (double)(i * 360) / nSegments;
+        double radians = degree * M_PI / 180;
+        addVtx((float)(x + cos(radians) * r), (float)(y + sin(radians) * r));
+    }
+
+    GLushort idxStart = vtxBuffSize - nSegments - (GLushort)1;
+    for (GLushort i = 0; i < nSegments - 1; i++) {
+        int idx[] = {idxStart, idxStart + i + (GLushort)1, idxStart + i + (GLushort)2};
+        addTriangle(idx);
+    }
+    int idx[] = {idxStart, idxStart + nSegments, idxStart + (GLushort)1};
+    addTriangle(idx);
 }
 
 void Container::end() {
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, buffSize * sizeof(float), vtxBuffer, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vtxBuffSize * sizeof(Vertex2), vtxBuffer, GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, idxBuffSize * sizeof(GLushort), idxBuffer, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
 void Container::draw() {
@@ -186,18 +228,35 @@ void Container::draw() {
     //cairo_surface_flush(crSurface);
     //cairo_gl_surface_swapbuffers(crSurface);
 
-    buffSize = 0;
-    r = 255; g = 255; b = 255; a = 1;
+    vtxBuffSize = 0;
+    idxBuffSize = 0;
+    glClear(GL_COLOR_BUFFER_BIT);
+    glClearColor(0, 0, 0, 0);
+
+    r = 255; g = 255; b = 255; a = 255;
+    //rect(0.1, 0.1, -1, 1);
     //rect(25, 25, 100, 100);
+    circle(0, 0, 0.6);
+    r = 255; g = 0; b = 0; a = 255;
     rect(0.1, 0.1, 1, 1);
     end();
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glEnableClientState(GL_VERTEX_ARRAY);
-    glVertexPointer(3, GL_FLOAT, sizeof(float) * 7, 0);
-    glColorPointer(4, GL_FLOAT, sizeof(float) * 7, (void*)(3 * sizeof(float)));
-    glDrawArrays(GL_TRIANGLES, 0, buffSize / 7);
+    glEnableClientState(GL_COLOR_ARRAY);
+
+    glVertexPointer(3, GL_FLOAT, sizeof(Vertex2), (void*)offsetof(Vertex2, x));
+    glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(Vertex2), (void*)offsetof(Vertex2, r));
+    //glDrawArrays(GL_TRIANGLES, 0, vtxBuffSize);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glDrawElements(GL_TRIANGLES, idxBuffSize, GL_UNSIGNED_SHORT, 0);
+
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
+
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
     eglSwapBuffers(display, surface);
 }

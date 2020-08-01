@@ -17,6 +17,11 @@
 
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "native-activity", __VA_ARGS__))
 
+struct Vertex2 {
+    float x, y, z;
+    unsigned char r, g, b, a;
+};
+
 struct Container {
     EGLint width, height;
     EGLSurface surface;
@@ -30,8 +35,11 @@ struct Container {
     bool animating;
 
     GLuint vbo;
-    float vtxBuffer[1024];
-    int buffSize;
+    GLuint ibo;
+    Vertex2 vtxBuffer[1024];
+    GLushort idxBuffer[1024];
+    GLushort vtxBuffSize;
+    GLushort idxBuffSize;
     unsigned char r, g, b, a;
 
     int initEgl();
@@ -40,7 +48,9 @@ struct Container {
     void initGl();
     void deinitGl();
     void addVtx(float x, float y);
+    void addTriangle(int* idx);
     void rect(float x, float y, float width, float height);
+    void circle(float x, float y, float r);
     void end();
 
     void draw();
