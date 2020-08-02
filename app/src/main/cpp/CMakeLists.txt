@@ -118,6 +118,7 @@ set(BUILD_SHARED_LIBS true)
 add_library(main
         SHARED
         main.cpp
+        Canvas.cpp
         Container.cpp
         ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c)
 

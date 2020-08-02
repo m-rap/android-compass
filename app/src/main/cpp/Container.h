@@ -6,21 +6,24 @@
 #define COMPASS_CONTAINER_H
 
 #include <EGL/egl.h>
-//#include <GLES2/gl2.h>
-#include <GLES/gl.h>
+
+#ifdef __ANDROID_API__
 
 #include <android/sensor.h>
 #include <android/log.h>
 #include <android_native_app_glue.h>
-//#include <cairo.h>
-//#include <cairo-gl.h>
 
 #define LOGI(...) ((void)__android_log_print(ANDROID_LOG_INFO, "native-activity", __VA_ARGS__))
 
-struct Vertex2 {
-    float x, y, z;
-    unsigned char r, g, b, a;
-};
+#else
+
+#define LOGI(...) (printf(__VA_ARGS__))
+
+#endif
+//#include <cairo.h>
+//#include <cairo-gl.h>
+
+#include "Canvas.h"
 
 struct Container {
     EGLint width, height;
@@ -34,24 +37,10 @@ struct Container {
     bool running;
     bool animating;
 
-    GLuint vbo;
-    GLuint ibo;
-    Vertex2 vtxBuffer[1024];
-    GLushort idxBuffer[1024];
-    GLushort vtxBuffSize;
-    GLushort idxBuffSize;
-    unsigned char r, g, b, a;
+    Canvas canvas;
 
     int initEgl();
     int deinitEgl();
-
-    void initGl();
-    void deinitGl();
-    void addVtx(float x, float y);
-    void addTriangle(int* idx);
-    void rect(float x, float y, float width, float height);
-    void circle(float x, float y, float r);
-    void end();
 
     void draw();
 };
