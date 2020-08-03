@@ -35,10 +35,11 @@ void engine_handle_cmd(struct android_app* app, int32_t cmd) {
                 //c.rect(0.1, 0.1, -1, 1);
                 //c.rect(25, 25, 100, 100);
                 c.circle(0, 0, 1);
-                c.setColor(255, 0, 0, 255);
-                c.rect(0.1, 0.1, 0.2, 0.2);
                 c.setColor(0, 255, 0, 255);
                 c.circle(0, 0, 0.2);
+                c.setColor(255, 0, 0, 255);
+                c.rect(0, 0, 0.2, 0.2);
+                c.drawables[2].rotation = 45;
                 c.end();
             }
             break;

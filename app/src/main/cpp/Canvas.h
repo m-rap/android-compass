@@ -32,33 +32,42 @@ struct Vertex2 {
     unsigned char r, g, b, a;
 };
 
-struct Shape {
+struct Drawable {
     Vertex2 vtxBuffer[200];
     GLushort idxBuffer[200];
     GLushort vtxBuffSize;
     GLushort idxBuffSize;
     unsigned char r, g, b, a;
+    float x, y;
+    float rotation;
     GLuint vbo;
     GLuint ibo;
     bool initialized = false;
 
-    ~Shape() { deinit(); }
+    Drawable** children;
+    int childrenCount;
 
     void init(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
     void deinit();
     void addVtx(float x, float y);
     void addTriangle(int* idx);
+
+    void rect(float x, float y, float width, float height);
+    void circle(float x, float y, float r);
+    void end();
+
+    void draw();
 };
 
 struct Canvas {
-    int width, height;
+    float width, height;
     uint8_t r, g, b, a;
 
-    Shape shapes[100];
-    int shapeCount;
+    Drawable drawables[5];
+    int drawableCount;
 
-    void initGl();
-    void deinitGl();
+    void init();
+    void deinit();
     void setColor(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
     void rect(float x, float y, float width, float height);
     void circle(float x, float y, float r);

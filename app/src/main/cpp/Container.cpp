@@ -103,8 +103,7 @@ int Container::initEgl() {
     //LOGI("cdt %08x surface %08x cr %08x", cdt, crSurface, cr);
     //LOGI("cr w %d h %d", cairo_gl_surface_get_width(crSurface), cairo_gl_surface_get_height(crSurface));
 
-
-    canvas.initGl();
+    canvas.init();
 
     running = true;
 
@@ -121,7 +120,7 @@ int Container::deinitEgl() {
     running = false;
     animating = false;
 
-    canvas.deinitGl();
+    canvas.deinit();
 
     //cairo_destroy(cr);
     //cairo_surface_destroy(crSurface);
