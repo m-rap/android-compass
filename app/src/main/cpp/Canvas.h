@@ -33,6 +33,7 @@ struct Vertex2 {
 };
 
 struct Drawable {
+    GLenum mode;
     Vertex2 vtxBuffer[200];
     GLushort idxBuffer[200];
     GLushort vtxBuffSize;
@@ -43,6 +44,7 @@ struct Drawable {
     GLuint vbo;
     GLuint ibo;
     bool initialized = false;
+    float lineWidth;
 
     Drawable* children[1024];
     int childrenCount;
@@ -53,8 +55,19 @@ struct Drawable {
     void addVtx(float x, float y);
     void addTriangle(int* idx);
 
-    void rect(float x, float y, float width, float height);
-    void circle(float x, float y, float r);
+    void _rectvtx(float x, float y, float width, float height);
+    void _circlevtx(float x, float y, float r);
+
+    void _rectfill(float x, float y, float width, float height);
+    void _rectstroke(float x1, float y1, float width, float height);
+    void _circlefill(float x1, float y1, float r);
+    void _circlestroke(float x, float y, float r);
+
+    Drawable* rectfill(float x1, float y1, float width, float height);
+    Drawable* circlefill(float x1, float y1, float r);
+    Drawable* rectstroke(float x1, float y1, float width, float height);
+    Drawable* circlestroke(float x1, float y1, float r);
+
     void end();
 
     void draw();

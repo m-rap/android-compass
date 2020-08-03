@@ -5,46 +5,11 @@
 #include "Canvas.h"
 #include <math.h>
 
+
 Drawable drawablePool[1024];
 int takenDrawableCount = 0;
+GLushort nSegments = 65;
 
-void _rect(Drawable& s, float x, float y, float width, float height) {
-    s.x = x;
-    s.y = y;;
-
-    s.addVtx(-width / 2, -height / 2);
-    s.addVtx(width / 2, -height / 2);
-    s.addVtx(width / 2, height / 2);
-    s.addVtx(-width / 2, height / 2);
-
-    int idx1[] = {s.vtxBuffSize - (GLushort)4, s.vtxBuffSize - (GLushort)3, s.vtxBuffSize - (GLushort)2};
-    s.addTriangle(idx1);
-
-    int idx2[] = {s.vtxBuffSize - (GLushort)4, s.vtxBuffSize - (GLushort)2, s.vtxBuffSize - (GLushort)1};
-    s.addTriangle(idx2);
-}
-
-void _circle(Drawable& s, float x, float y, float radius) {
-    GLushort nSegments = 65;
-
-    s.x = x;
-    s.y = y;
-
-    s.addVtx(0, 0);
-    for (int i = 0; i < nSegments; i++) {
-        double degree = (double)(i * 360) / nSegments;
-        double radians = degree * M_PI / 180;
-        s.addVtx((float)(cos(radians) * radius), (float)(sin(radians) * radius));
-    }
-
-    GLushort idxStart = s.vtxBuffSize - nSegments - (GLushort)1;
-    for (GLushort i = 0; i < nSegments - 1; i++) {
-        int idx[] = {idxStart, idxStart + i + (GLushort)1, idxStart + i + (GLushort)2};
-        s.addTriangle(idx);
-    }
-    int idx[] = {idxStart, idxStart + nSegments, idxStart + (GLushort)1};
-    s.addTriangle(idx);
-}
 
 void Drawable::deinit() {
     LOGI("drawable deinit %08x %d %d", this, initialized, childrenCount);
@@ -74,6 +39,7 @@ void Drawable::init() {
     x = 0;
     y = 0;
     rotation = 0;
+    lineWidth = 1;
 }
 
 void Drawable::setColor(unsigned char r1, unsigned char g1, unsigned char b1, unsigned char a1) {
@@ -93,26 +59,119 @@ void Drawable::addTriangle(int* idx) {
     idxBuffer[idxBuffSize++] = idx[2];
 }
 
-void Drawable::rect(float x, float y, float width, float height) {
-    LOGI("rect %d %d", childrenCount, takenDrawableCount);
-    if (takenDrawableCount >= 1024) {
-        return;
-    }
-    Drawable* d = children[childrenCount++] = &drawablePool[takenDrawableCount++];
-    d->init();
-    d->setColor(r, g, b, a);
-    _rect(*d, x, y, width, height);
+void Drawable::_rectvtx(float x1, float y1, float width, float height) {
+    x = x1;
+    y = y1;
+
+    addVtx(-width / 2, -height / 2);
+    addVtx(width / 2, -height / 2);
+    addVtx(width / 2, height / 2);
+    addVtx(-width / 2, height / 2);
 }
 
-void Drawable::circle(float x, float y, float radius) {
-    LOGI("circle %d %d", childrenCount, takenDrawableCount);
+void Drawable::_circlevtx(float x1, float y1, float radius) {
+    x = x1;
+    y = y1;
+
+    addVtx(0, 0);
+    for (int i = 0; i < nSegments; i++) {
+        double degree = (double)(i * 360) / nSegments;
+        double radians = degree * M_PI / 180;
+        addVtx((float)(cos(radians) * radius), (float)(sin(radians) * radius));
+    }
+}
+
+void Drawable::_rectfill(float x1, float y1, float width, float height) {
+    _rectvtx(x1, y1, width, height);
+
+    mode = GL_TRIANGLES;
+
+    int idx1[] = {vtxBuffSize - (GLushort)4, vtxBuffSize - (GLushort)3, vtxBuffSize - (GLushort)2};
+    addTriangle(idx1);
+
+    int idx2[] = {vtxBuffSize - (GLushort)4, vtxBuffSize - (GLushort)2, vtxBuffSize - (GLushort)1};
+    addTriangle(idx2);
+}
+
+void Drawable::_circlefill(float x1, float y1, float radius) {
+    _circlevtx(x1, y1, radius);
+
+    mode = GL_TRIANGLE_FAN;
+
+    GLushort idxStart = vtxBuffSize - nSegments - 1;
+    for (GLushort i = 0; i < nSegments - 1; i++) {
+        idxBuffer[idxBuffSize++] = idxStart + i;
+    }
+    idxBuffer[idxBuffSize++] = idxStart + 1;
+}
+
+void Drawable::_rectstroke(float x1, float y1, float width, float height) {
+    _rectvtx(x1, y1, width, height);
+
+    mode = GL_LINE_LOOP;
+
+    idxBuffer[idxBuffSize++] = vtxBuffSize - 4;
+    idxBuffer[idxBuffSize++] = vtxBuffSize - 3;
+    idxBuffer[idxBuffSize++] = vtxBuffSize - 2;
+    idxBuffer[idxBuffSize++] = vtxBuffSize - 1;
+}
+
+void Drawable::_circlestroke(float x, float y, float radius) {
+    _circlevtx(x, y, radius);
+
+    mode = GL_LINE_LOOP;
+
+    for (GLushort i = 0; i < nSegments; i++) {
+        idxBuffer[idxBuffSize++] = i;
+    }
+}
+
+Drawable* Drawable::rectfill(float x1, float y1, float width, float height) {
     if (takenDrawableCount >= 1024) {
-        return;
+        return NULL;
     }
     Drawable* d = children[childrenCount++] = &drawablePool[takenDrawableCount++];
     d->init();
     d->setColor(r, g, b, a);
-    _circle(*d, x, y, radius);
+    d->lineWidth = lineWidth;
+    d->_rectfill(x1, y1, width, height);
+    return d;
+}
+
+Drawable* Drawable::circlefill(float x1, float y1, float radius) {
+    if (takenDrawableCount >= 1024) {
+        return NULL;
+    }
+    Drawable* d = children[childrenCount++] = &drawablePool[takenDrawableCount++];
+    d->init();
+    d->setColor(r, g, b, a);
+    d->lineWidth = lineWidth;
+    d->_circlefill(x1, y1, radius);
+    return d;
+}
+
+Drawable* Drawable::rectstroke(float x1, float y1, float width, float height) {
+    if (takenDrawableCount >= 1024) {
+        return NULL;
+    }
+    Drawable* d = children[childrenCount++] = &drawablePool[takenDrawableCount++];
+    d->init();
+    d->setColor(r, g, b, a);
+    d->lineWidth = lineWidth;
+    d->_rectstroke(x1, y1, width, height);
+    return d;
+}
+
+Drawable* Drawable::circlestroke(float x1, float y1, float radius) {
+    if (takenDrawableCount >= 1024) {
+        return NULL;
+    }
+    Drawable* d = children[childrenCount++] = &drawablePool[takenDrawableCount++];
+    d->init();
+    d->setColor(r, g, b, a);
+    d->lineWidth = lineWidth;
+    d->_circlestroke(x1, y1, radius);
+    return d;
 }
 
 void Drawable::end() {
@@ -137,6 +196,7 @@ void Drawable::draw() {
     glRotatef(rotation, 0, 0, 1);
 
     if (idxBuffSize > 0) {
+        glLineWidth(lineWidth);
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glEnableClientState(GL_VERTEX_ARRAY);
         glEnableClientState(GL_COLOR_ARRAY);
@@ -145,7 +205,8 @@ void Drawable::draw() {
         glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(Vertex2), (void*)offsetof(Vertex2, r));
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-        glDrawElements(GL_TRIANGLES, idxBuffSize, GL_UNSIGNED_SHORT, 0);
+        //glDrawElements(GL_TRIANGLES, idxBuffSize, GL_UNSIGNED_SHORT, 0);
+        glDrawElements(mode, idxBuffSize, GL_UNSIGNED_SHORT, 0);
 
         glDisableClientState(GL_VERTEX_ARRAY);
         glDisableClientState(GL_COLOR_ARRAY);
