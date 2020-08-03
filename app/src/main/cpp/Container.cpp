@@ -113,10 +113,10 @@ int Container::initEgl() {
 }
 
 int Container::deinitEgl() {
+    LOGI("deinitEgl %d", running);
     if (!running) {
         return 0;
     }
-    //LOGI("deinitEgl");
     running = false;
     animating = false;
 
@@ -149,7 +149,16 @@ void Container::draw() {
 }
 
 
-
+//cairo_set_source_rgb(cr, 0.0, 0.0, 0.0);
+//cairo_paint(cr);
+//
+//cairo_set_line_width(cr, 1);
+//cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);
+//cairo_rectangle(cr, 25, 25, 100, 100);
+//cairo_stroke(cr);
+////cairo_fill(cr);
+//cairo_surface_flush(crSurface);
+//cairo_gl_surface_swapbuffers(crSurface);
 
 //int initEgl(Container& container1) {
 //    LOGI("initEgl");

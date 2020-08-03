@@ -44,10 +44,11 @@ struct Drawable {
     GLuint ibo;
     bool initialized = false;
 
-    Drawable** children;
+    Drawable* children[1024];
     int childrenCount;
 
-    void init(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
+    void init();
+    void setColor(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
     void deinit();
     void addVtx(float x, float y);
     void addTriangle(int* idx);
@@ -60,18 +61,13 @@ struct Drawable {
 };
 
 struct Canvas {
-    float width, height;
-    uint8_t r, g, b, a;
+    Drawable parent;
 
-    Drawable drawables[5];
-    int drawableCount;
+    float width, height;
 
     void init();
     void deinit();
-    void setColor(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
-    void rect(float x, float y, float width, float height);
-    void circle(float x, float y, float r);
-    void end();
+
     void draw();
 };
 

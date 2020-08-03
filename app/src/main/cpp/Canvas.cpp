@@ -5,18 +5,12 @@
 #include "Canvas.h"
 #include <math.h>
 
-
 Drawable drawablePool[1024];
 int takenDrawableCount = 0;
 
 void _rect(Drawable& s, float x, float y, float width, float height) {
     s.x = x;
-    s.y = y;
-
-    //s.addVtx(x, y);
-    //s.addVtx(x + width, y);
-    //s.addVtx(x + width, y + height);
-    //s.addVtx(x, y + height);
+    s.y = y;;
 
     s.addVtx(-width / 2, -height / 2);
     s.addVtx(width / 2, -height / 2);
@@ -36,13 +30,10 @@ void _circle(Drawable& s, float x, float y, float radius) {
     s.x = x;
     s.y = y;
 
-    //s.addVtx(x, y);
     s.addVtx(0, 0);
     for (int i = 0; i < nSegments; i++) {
         double degree = (double)(i * 360) / nSegments;
-        //double radians = degree * 3.14159265358979323846 / 180;
         double radians = degree * M_PI / 180;
-        //s.addVtx((float)(x + cos(radians) * radius), (float)(y + sin(radians) * radius));
         s.addVtx((float)(cos(radians) * radius), (float)(sin(radians) * radius));
     }
 
@@ -56,6 +47,7 @@ void _circle(Drawable& s, float x, float y, float radius) {
 }
 
 void Drawable::deinit() {
+    LOGI("drawable deinit %08x %d %d", this, initialized, childrenCount);
     if (initialized) {
         initialized = false;
         glDeleteBuffers(1, &vbo);
@@ -64,18 +56,28 @@ void Drawable::deinit() {
         for (int i = 0; i < childrenCount; i++) {
             children[i]->deinit();
         }
+        childrenCount = 0;
     }
 }
 
-void Drawable::init(unsigned char r1, unsigned char g1, unsigned char b1, unsigned char a1) {
+void Drawable::init() {
+    LOGI("drawable init");
     initialized = true;
 
-    r = r1; g = g1; b = b1; a = a1;
+    childrenCount = 0;
+
     glGenBuffers(1, &vbo);
     glGenBuffers(1, &ibo);
 
     vtxBuffSize = 0;
     idxBuffSize = 0;
+    x = 0;
+    y = 0;
+    rotation = 0;
+}
+
+void Drawable::setColor(unsigned char r1, unsigned char g1, unsigned char b1, unsigned char a1) {
+    r = r1; g = g1; b = b1; a = a1;
 }
 
 void Drawable::addVtx(float x, float y) {
@@ -92,20 +94,24 @@ void Drawable::addTriangle(int* idx) {
 }
 
 void Drawable::rect(float x, float y, float width, float height) {
+    LOGI("rect %d %d", childrenCount, takenDrawableCount);
     if (takenDrawableCount >= 1024) {
         return;
     }
     Drawable* d = children[childrenCount++] = &drawablePool[takenDrawableCount++];
-    d->init(r, g, b, a);
+    d->init();
+    d->setColor(r, g, b, a);
     _rect(*d, x, y, width, height);
 }
 
 void Drawable::circle(float x, float y, float radius) {
+    LOGI("circle %d %d", childrenCount, takenDrawableCount);
     if (takenDrawableCount >= 1024) {
         return;
     }
     Drawable* d = children[childrenCount++] = &drawablePool[takenDrawableCount++];
-    d->init(r, g, b, a);
+    d->init();
+    d->setColor(r, g, b, a);
     _circle(*d, x, y, radius);
 }
 
@@ -124,37 +130,39 @@ void Drawable::end() {
 }
 
 void Drawable::draw() {
-    glMatrixMode(GL_MODELVIEW_MATRIX);
+    glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
 
     glTranslatef(x, y, 0);
     glRotatef(rotation, 0, 0, 1);
 
-    LOGI("x, y, rot %f %f, %f", x, y, rotation);
+    if (idxBuffSize > 0) {
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glEnableClientState(GL_VERTEX_ARRAY);
+        glEnableClientState(GL_COLOR_ARRAY);
 
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glEnableClientState(GL_COLOR_ARRAY);
+        glVertexPointer(3, GL_FLOAT, sizeof(Vertex2), (void*)offsetof(Vertex2, x));
+        glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(Vertex2), (void*)offsetof(Vertex2, r));
 
-    glVertexPointer(3, GL_FLOAT, sizeof(Vertex2), (void*)offsetof(Vertex2, x));
-    glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(Vertex2), (void*)offsetof(Vertex2, r));
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+        glDrawElements(GL_TRIANGLES, idxBuffSize, GL_UNSIGNED_SHORT, 0);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-    glDrawElements(GL_TRIANGLES, idxBuffSize, GL_UNSIGNED_SHORT, 0);
-
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
+        glDisableClientState(GL_VERTEX_ARRAY);
+        glDisableClientState(GL_COLOR_ARRAY);
+    }
 
     for (int i = 0; i < childrenCount; i++) {
         children[i]->draw();
     }
 
-    glMatrixMode(GL_MODELVIEW_MATRIX);
+    glMatrixMode(GL_MODELVIEW);
     glPopMatrix();
 }
 
 void Canvas::init() {
-    drawableCount = 0;
+    LOGI("canvas init");
+    parent.init();
+    takenDrawableCount = 0;
 
     //glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
     glEnable(GL_CULL_FACE);
@@ -169,42 +177,15 @@ void Canvas::init() {
 }
 
 void Canvas::deinit() {
-    for (int i = 0; i < drawableCount; i++) {
-        drawables[i].deinit();
-    }
-}
-
-void Canvas::setColor(unsigned char r1, unsigned char g1, unsigned char b1, unsigned char a1) {
-    r = r1; g = g1; b = b1; a = a1;
-}
-
-void Canvas::rect(float x, float y, float width, float height) {
-    Drawable& s = drawables[drawableCount++];
-    s.init(r, g, b, a);
-    _rect(s, x, y, width, height);
-}
-
-void Canvas::circle(float x, float y, float radius) {
-    Drawable& s = drawables[drawableCount];
-    drawableCount++;
-    s.init(r, g, b, a);
-
-    _circle(s, x, y, radius);
-}
-
-void Canvas::end() {
-    for (int i = 0; i < drawableCount; i++) {
-        drawables[i].end();
-    }
+    parent.deinit();
+    takenDrawableCount = 0;
 }
 
 void Canvas::draw() {
     glClear(GL_COLOR_BUFFER_BIT);
     glClearColor(0, 0, 0, 0);
 
-    for (int i = 0; i < drawableCount; i++) {
-        drawables[i].draw();
-    }
+    parent.draw();
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);

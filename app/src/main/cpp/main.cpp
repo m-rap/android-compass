@@ -15,22 +15,10 @@ void engine_handle_cmd(struct android_app* app, int32_t cmd) {
             break;
         case APP_CMD_INIT_WINDOW:
             if (container1->app->window != nullptr) {
-                //initEgl(*container1);
                 container1->initEgl();
 
-                //cairo_set_source_rgb(cr, 0.0, 0.0, 0.0);
-                //cairo_paint(cr);
-                //
-                //cairo_set_line_width(cr, 1);
-                //cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);
-                //cairo_rectangle(cr, 25, 25, 100, 100);
-                //cairo_stroke(cr);
-                ////cairo_fill(cr);
-                //cairo_surface_flush(crSurface);
-                //cairo_gl_surface_swapbuffers(crSurface);
-
-
-                Canvas& c = container1->canvas;
+                //Canvas& c = container1->canvas;
+                Drawable& c = *(Drawable*)&container1->canvas;
                 c.setColor(255, 255, 255, 255);
                 //c.rect(0.1, 0.1, -1, 1);
                 //c.rect(25, 25, 100, 100);
@@ -39,12 +27,12 @@ void engine_handle_cmd(struct android_app* app, int32_t cmd) {
                 c.circle(0, 0, 0.2);
                 c.setColor(255, 0, 0, 255);
                 c.rect(0, 0, 0.2, 0.2);
-                c.drawables[2].rotation = 45;
+                //c.drawables[2].rotation = 45;
+                c.children[2]->rotation = 45;
                 c.end();
             }
             break;
         case APP_CMD_TERM_WINDOW:
-            //deinitEgl(*container1);
             container1->deinitEgl();
             break;
         case APP_CMD_GAINED_FOCUS:
@@ -76,7 +64,6 @@ void android_main(struct android_app* state) {
 
     int fps = 0;
 
-
     LOGI("to loop");
     while (true) {
         int ident;
@@ -104,14 +91,17 @@ void android_main(struct android_app* state) {
 
             if (state->destroyRequested != 0) {
                 LOGI("destroyRequested");
-                //deinitEgl(container);
                 container.deinitEgl();
-                return;
+                break;
             }
         }
 
+        if (state->destroyRequested != 0) {
+            break;
+        }
+
         if (secDiff != prevSecDiff) {
-            //LOGI("fps %d", fps);
+            LOGI("fps %d", fps);
             fps = 0;
         }
 
@@ -124,4 +114,6 @@ void android_main(struct android_app* state) {
 
         prevSecDiff = secDiff;
     }
+
+    LOGI("main end");
 }
