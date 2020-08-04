@@ -41,6 +41,7 @@ struct Container {
 
     ASensorManager* sensorManager;
     const ASensor* compassSensor;
+    const ASensor* accelSensor;
     ASensorEventQueue *sensorEventQueue;
 
     int initEgl();
