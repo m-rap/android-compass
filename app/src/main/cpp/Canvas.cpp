@@ -8,7 +8,7 @@
 
 Drawable drawablePool[1024];
 int takenDrawableCount = 0;
-GLushort nSegments = 65;
+GLushort nSegments = 200;
 
 
 void Drawable::deinit() {
@@ -327,7 +327,8 @@ void Canvas::init() {
     glEnable(GL_CULL_FACE);
     //glShadeModel(GL_SMOOTH);
     glDisable(GL_DEPTH_TEST);
-    float small = width, big = height;
+    small = width;
+    big = height;
     if (height < width) {
         small = height;
         big = width;

@@ -39,6 +39,10 @@ struct Container {
 
     Canvas canvas;
 
+    ASensorManager* sensorManager;
+    const ASensor* compassSensor;
+    ASensorEventQueue *sensorEventQueue;
+
     int initEgl();
     int deinitEgl();
 

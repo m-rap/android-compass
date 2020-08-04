@@ -34,8 +34,8 @@ struct Vertex2 {
 
 struct Drawable {
     GLenum mode;
-    Vertex2 vtxBuffer[200];
-    GLushort idxBuffer[200];
+    Vertex2 vtxBuffer[500];
+    GLushort idxBuffer[500];
     GLushort vtxBuffSize;
     GLushort idxBuffSize;
     unsigned char r, g, b, a;
@@ -81,6 +81,7 @@ struct Canvas {
     Drawable clzparent;
 
     float width, height;
+    float small, big;
 
     void init();
     void deinit();
