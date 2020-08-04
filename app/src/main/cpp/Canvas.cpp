@@ -25,7 +25,7 @@ void Drawable::deinit() {
     }
 }
 
-void Drawable::init() {
+void Drawable::init(Drawable* parent1) {
     LOGI("drawable init");
     initialized = true;
 
@@ -39,7 +39,20 @@ void Drawable::init() {
     x = 0;
     y = 0;
     rotation = 0;
+    scale = 1;
     lineWidth = 1;
+    parent = parent1;
+
+    Drawable* tmp = this;
+    while (tmp != NULL) {
+        if (tmp->parent == NULL) {
+            canvas = tmp;
+            break;
+        }
+        tmp = tmp->parent;
+    }
+    setColor(canvas->r, canvas->g, canvas->b, canvas->a);
+    lineWidth = canvas->lineWidth;
 }
 
 void Drawable::setColor(unsigned char r1, unsigned char g1, unsigned char b1, unsigned char a1) {
@@ -126,50 +139,135 @@ void Drawable::_circlestroke(float x, float y, float radius) {
     }
 }
 
-Drawable* Drawable::rectfill(float x1, float y1, float width, float height) {
+//void _rectvtx(Drawable& d, float x1, float y1, float width, float height) {
+//    d.x = x1;
+//    d.y = y1;
+//
+//    d.addVtx(-width / 2, -height / 2);
+//    d.addVtx(width / 2, -height / 2);
+//    d.addVtx(width / 2, height / 2);
+//    d.addVtx(-width / 2, height / 2);
+//}
+//
+//void _circlevtx(Drawable& d, float x1, float y1, float radius) {
+//    d.x = x1;
+//    d.y = y1;
+//
+//    d.addVtx(0, 0);
+//    for (int i = 0; i < nSegments; i++) {
+//        double degree = (double)(i * 360) / nSegments;
+//        double radians = degree * M_PI / 180;
+//        d.addVtx((float)(cos(radians) * radius), (float)(sin(radians) * radius));
+//    }
+//}
+//
+//void _rectfill(Drawable& d, float x1, float y1, float width, float height) {
+//    _rectvtx(d, x1, y1, width, height);
+//
+//    d.mode = GL_TRIANGLES;
+//
+//    int idx1[] = {d.vtxBuffSize - (GLushort)4, d.vtxBuffSize - (GLushort)3, d.vtxBuffSize - (GLushort)2};
+//    d.addTriangle(idx1);
+//
+//    int idx2[] = {d.vtxBuffSize - (GLushort)4, d.vtxBuffSize - (GLushort)2, d.vtxBuffSize - (GLushort)1};
+//    d.addTriangle(idx2);
+//}
+//
+//void _circlefill(Drawable& d, float x1, float y1, float radius) {
+//    _circlevtx(d, x1, y1, radius);
+//
+//    d.mode = GL_TRIANGLE_FAN;
+//
+//    GLushort idxStart = d.vtxBuffSize - nSegments - 1;
+//    for (GLushort i = 0; i < nSegments - 1; i++) {
+//        d.idxBuffer[d.idxBuffSize++] = idxStart + i;
+//    }
+//    d.idxBuffer[d.idxBuffSize++] = idxStart + 1;
+//}
+//
+//void _rectstroke(Drawable& d, float x1, float y1, float width, float height) {
+//    _rectvtx(d, x1, y1, width, height);
+//
+//    d.mode = GL_LINE_LOOP;
+//
+//    d.idxBuffer[d.idxBuffSize++] = d.vtxBuffSize - 4;
+//    d.idxBuffer[d.idxBuffSize++] = d.vtxBuffSize - 3;
+//    d.idxBuffer[d.idxBuffSize++] = d.vtxBuffSize - 2;
+//    d.idxBuffer[d.idxBuffSize++] = d.vtxBuffSize - 1;
+//}
+//
+//void _circlestroke(Drawable& d, float x, float y, float radius) {
+//    _circlevtx(d, x, y, radius);
+//
+//    d.mode = GL_LINE_LOOP;
+//
+//    for (GLushort i = 0; i < nSegments; i++) {
+//        d.idxBuffer[d.idxBuffSize++] = i;
+//    }
+//}
+
+//Drawable* addchild(Drawable& p) {
+//    if (takenDrawableCount >= 1024) {
+//        return NULL;
+//    }
+//    Drawable* d = p.children[p.childrenCount++] = &drawablePool[takenDrawableCount++];
+//    d->init(&p);
+//    return d;
+//}
+
+//Drawable* Drawable::rectfill(float x1, float y1, float width, float height) {
+//    Drawable* d = addchild(*this);
+//    _rectfill(*d, x1, y1, width, height);
+//    return d;
+//}
+//
+//Drawable* Drawable::circlefill(float x1, float y1, float radius) {
+//    Drawable* d = addchild(*this);
+//    _circlefill(*d, x1, y1, radius);
+//    return d;
+//}
+//
+//Drawable* Drawable::rectstroke(float x1, float y1, float width, float height) {
+//    Drawable* d = addchild(*this);
+//    _rectstroke(*d, x1, y1, width, height);
+//    return d;
+//}
+//
+//Drawable* Drawable::circlestroke(float x1, float y1, float radius) {
+//    Drawable* d = addchild(*this);
+//    _circlestroke(*d, x1, y1, radius);
+//    return d;
+//}
+
+Drawable* Drawable::addchild() {
     if (takenDrawableCount >= 1024) {
         return NULL;
     }
     Drawable* d = children[childrenCount++] = &drawablePool[takenDrawableCount++];
-    d->init();
-    d->setColor(r, g, b, a);
-    d->lineWidth = lineWidth;
+    d->init(this);
+    return d;
+}
+
+Drawable* Drawable::rectfill(float x1, float y1, float width, float height) {
+    Drawable* d = addchild();
     d->_rectfill(x1, y1, width, height);
     return d;
 }
 
 Drawable* Drawable::circlefill(float x1, float y1, float radius) {
-    if (takenDrawableCount >= 1024) {
-        return NULL;
-    }
-    Drawable* d = children[childrenCount++] = &drawablePool[takenDrawableCount++];
-    d->init();
-    d->setColor(r, g, b, a);
-    d->lineWidth = lineWidth;
+    Drawable* d = addchild();
     d->_circlefill(x1, y1, radius);
     return d;
 }
 
 Drawable* Drawable::rectstroke(float x1, float y1, float width, float height) {
-    if (takenDrawableCount >= 1024) {
-        return NULL;
-    }
-    Drawable* d = children[childrenCount++] = &drawablePool[takenDrawableCount++];
-    d->init();
-    d->setColor(r, g, b, a);
-    d->lineWidth = lineWidth;
+    Drawable* d = addchild();
     d->_rectstroke(x1, y1, width, height);
     return d;
 }
 
 Drawable* Drawable::circlestroke(float x1, float y1, float radius) {
-    if (takenDrawableCount >= 1024) {
-        return NULL;
-    }
-    Drawable* d = children[childrenCount++] = &drawablePool[takenDrawableCount++];
-    d->init();
-    d->setColor(r, g, b, a);
-    d->lineWidth = lineWidth;
+    Drawable* d = addchild();
     d->_circlestroke(x1, y1, radius);
     return d;
 }
@@ -194,6 +292,7 @@ void Drawable::draw() {
 
     glTranslatef(x, y, 0);
     glRotatef(rotation, 0, 0, 1);
+    glScalef(scale, scale, scale);
 
     if (idxBuffSize > 0) {
         glLineWidth(lineWidth);
@@ -205,7 +304,6 @@ void Drawable::draw() {
         glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(Vertex2), (void*)offsetof(Vertex2, r));
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-        //glDrawElements(GL_TRIANGLES, idxBuffSize, GL_UNSIGNED_SHORT, 0);
         glDrawElements(mode, idxBuffSize, GL_UNSIGNED_SHORT, 0);
 
         glDisableClientState(GL_VERTEX_ARRAY);
@@ -222,7 +320,7 @@ void Drawable::draw() {
 
 void Canvas::init() {
     LOGI("canvas init");
-    parent.init();
+    clzparent.init(NULL);
     takenDrawableCount = 0;
 
     //glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
@@ -238,7 +336,7 @@ void Canvas::init() {
 }
 
 void Canvas::deinit() {
-    parent.deinit();
+    clzparent.deinit();
     takenDrawableCount = 0;
 }
 
@@ -246,7 +344,7 @@ void Canvas::draw() {
     glClear(GL_COLOR_BUFFER_BIT);
     glClearColor(0, 0, 0, 0);
 
-    parent.draw();
+    clzparent.draw();
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);

@@ -41,15 +41,18 @@ struct Drawable {
     unsigned char r, g, b, a;
     float x, y;
     float rotation;
+    float scale;
     GLuint vbo;
     GLuint ibo;
     bool initialized = false;
     float lineWidth;
 
+    Drawable* canvas;
+    Drawable* parent;
     Drawable* children[1024];
     int childrenCount;
 
-    void init();
+    void init(Drawable* parent);
     void setColor(unsigned char r, unsigned char g, unsigned char b, unsigned char a);
     void deinit();
     void addVtx(float x, float y);
@@ -63,6 +66,7 @@ struct Drawable {
     void _circlefill(float x1, float y1, float r);
     void _circlestroke(float x, float y, float r);
 
+    Drawable* addchild();
     Drawable* rectfill(float x1, float y1, float width, float height);
     Drawable* circlefill(float x1, float y1, float r);
     Drawable* rectstroke(float x1, float y1, float width, float height);
@@ -74,7 +78,7 @@ struct Drawable {
 };
 
 struct Canvas {
-    Drawable parent;
+    Drawable clzparent;
 
     float width, height;
 

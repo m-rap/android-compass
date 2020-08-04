@@ -4,6 +4,25 @@
 
 #include "Container.h"
 
+void constructDraw(Container* container1) {
+    //Canvas& c = container1->canvas;
+    Drawable& c = *(Drawable*)&container1->canvas;
+    c.setColor(255, 255, 255, 255);
+    //c.rectfill(0.1, 0.1, -1, 1);
+    //c.rectfill(25, 25, 100, 100);
+    //c.circlefill(0, 0, 1);
+    c.setColor(0, 255, 0, 255);
+    c.circlefill(0, 0, 0.2);
+    //c.circlestroke(0, 0, 0.2);
+    c.setColor(255, 0, 0, 255);
+    c.lineWidth = 3.0f;
+    //Drawable* rect = c.rectfill(0, 0, 0.2, 0.2);
+    Drawable* rect = c.rectstroke(0.5, 0, 0.2, 0.2);
+    rect->rotation = 45;
+    rect->scale = 2;
+    c.end();
+}
+
 void engine_handle_cmd(struct android_app* app, int32_t cmd) {
     LOGI("engine_handle_cmd %d", cmd);
     if (app->userData == NULL) {
@@ -16,22 +35,7 @@ void engine_handle_cmd(struct android_app* app, int32_t cmd) {
         case APP_CMD_INIT_WINDOW:
             if (container1->app->window != nullptr) {
                 container1->initEgl();
-
-                //Canvas& c = container1->canvas;
-                Drawable& c = *(Drawable*)&container1->canvas;
-                c.setColor(255, 255, 255, 255);
-                //c.rectfill(0.1, 0.1, -1, 1);
-                //c.rectfill(25, 25, 100, 100);
-                //c.circlefill(0, 0, 1);
-                c.setColor(0, 255, 0, 255);
-                c.circlefill(0, 0, 0.2);
-                //c.circlestroke(0, 0, 0.2);
-                c.setColor(255, 0, 0, 255);
-                c.lineWidth = 3.0f;
-                //Drawable* rect = c.rectfill(0, 0, 0.2, 0.2);
-                Drawable* rect = c.rectstroke(0, 0, 0.2, 0.2);
-                rect->rotation = 45;
-                c.end();
+                constructDraw(container1);
             }
             break;
         case APP_CMD_TERM_WINDOW:
@@ -108,7 +112,6 @@ void android_main(struct android_app* state) {
         }
 
         if (container.running && container.animating) {
-
             container.draw();
         }
 
