@@ -9,7 +9,8 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <activity android:name="android.app.NativeActivity">
+        <!--<activity android:name="android.app.NativeActivity">-->
+        <activity android:name=".CompassNativeActivity">
             <meta-data android:name="android.app.lib_name" android:value="main" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

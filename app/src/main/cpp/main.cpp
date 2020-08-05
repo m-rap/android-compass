@@ -44,23 +44,67 @@ void constructDraw(Container* container1) {
     canvas.end();
 }
 
-const int navg = 60;
-float magXAvgs[navg];
-float magYAvgs[navg];
-float magZAvgs[navg];
-float aXAvgs[navg];
-float aYAvgs[navg];
-float aZAvgs[navg];
-float smoothMag[3], smoothAccel[3];
-int filterIdx = 0;
-int filterCount = 0;
+//const int navg = 60;
+float alpha = 0.05;
+
+struct Filter {
+    float smooth[3];
+
+    void add(float* v) {
+        for (int i = 0; i < 3; i++) {
+            smooth[i] = smooth[i] + alpha * (v[i] - smooth[i]);
+            //smooth[i] = prev[i] + alpha * (v[i] - prev[i]);
+            //LOGI("%f %f %f %f %f", smooth[i], prev[i], v[i], (v[i] - prev[i]), alpha * (v[i] - prev[i]));
+            //prev[i] = smooth[i];
+        }
+    }
+
+//    float x[navg], y[navg], z[navg];
+//    int idx = 0;
+//    int count = 0;
+
+//    void add(float* v) {
+//        x[idx] = v[0];
+//        y[idx] = v[1];
+//        z[idx] = v[2];
+//        idx = (idx + 1) % navg;
+//        if (count < navg) {
+//            count++;
+//        }
+//
+//        int div;
+//        if (count > 1 && count < navg) {
+//            div = count;
+//        } else {
+//            div = navg;
+//        }
+//
+//        smooth[0] = 0;
+//        smooth[1] = 0;
+//        smooth[2] = 0;
+//        for (int i = 0; i < div; i++) {
+//            smooth[0] += x[i];
+//            smooth[1] += y[i];
+//            smooth[2] += z[i];
+//        }
+//        smooth[0] /= div;
+//        smooth[1] /= div;
+//        smooth[2] /= div;
+//    }
+};
+
+Filter accelAvg, magAvg;
+
+bool sensorEnabled = false;
 
 void enableSensor(Container* container1) {
-    if (container1->compassSensor == NULL)
+    if (sensorEnabled || container1->compassSensor == NULL)
         return;
-    memset(magXAvgs, 0, sizeof(float) * navg);
-    filterIdx = 0;
-    filterCount = 0;
+    sensorEnabled = true;
+
+    memset(&accelAvg, 0, sizeof(Filter));
+    memset(&magAvg, 0, sizeof(Filter));
+
     ASensorEventQueue_enableSensor(container1->sensorEventQueue, container1->compassSensor);
     ASensorEventQueue_enableSensor(container1->sensorEventQueue, container1->accelSensor);
     // 60 events per second.
@@ -69,8 +113,9 @@ void enableSensor(Container* container1) {
 }
 
 void disableSensor(Container* container1) {
-    if (container1->compassSensor == NULL)
+    if (!sensorEnabled || container1->compassSensor == NULL)
         return;
+    sensorEnabled = false;
     ASensorEventQueue_disableSensor(container1->sensorEventQueue, container1->compassSensor);
 }
 
@@ -107,7 +152,8 @@ void engine_handle_cmd(struct android_app* app, int32_t cmd) {
 }
 
 #include <dlfcn.h>
-ASensorManager* aquireASensorManagerInstance(android_app* app) {
+//ASensorManager* aquireASensorManagerInstance(android_app* app) {
+ASensorManager* aquireASensorManagerInstance(android_app* app, JNIEnv* env) {
     if(!app)
         return NULL;
 
@@ -116,8 +162,8 @@ ASensorManager* aquireASensorManagerInstance(android_app* app) {
     GetInstanceForPackage gfpFunc = (GetInstanceForPackage)dlsym(androidHandle, "ASensorManager_getInstanceForPackage");
 
     if (gfpFunc) {
-        JNIEnv* env = NULL;
-        app->activity->vm->AttachCurrentThread(&env, NULL);
+        //JNIEnv* env = NULL;
+        //app->activity->vm->AttachCurrentThread(&env, NULL);
 
         jclass activityClz = env->GetObjectClass(app->activity->clazz);
         jmethodID midGetPackageName = env->GetMethodID(activityClz, "getPackageName", "()Ljava/lang/String;");
@@ -126,7 +172,8 @@ ASensorManager* aquireASensorManagerInstance(android_app* app) {
         const char *nativePackageName = env->GetStringUTFChars(packageName, NULL);
         ASensorManager* mgr = gfpFunc(nativePackageName);
         env->ReleaseStringUTFChars(packageName, nativePackageName);
-        app->activity->vm->DetachCurrentThread();
+
+        //app->activity->vm->DetachCurrentThread();
 
         if (mgr) {
             dlclose(androidHandle);
@@ -150,29 +197,29 @@ void android_main(struct android_app* state) {
     timeval start;
     gettimeofday(&start, NULL);
 
+    JNIEnv* env = NULL;
+    state->activity->vm->AttachCurrentThread(&env, NULL);
+
     Container container;
     container.running = false;
     container.animating = false;
     container.compassSensor = NULL;
 
     container.app = state;
-    container.sensorManager = aquireASensorManagerInstance(state);
+    container.sensorManager = aquireASensorManagerInstance(state, env);
     container.compassSensor = ASensorManager_getDefaultSensor(container.sensorManager, ASENSOR_TYPE_MAGNETIC_FIELD);
     container.accelSensor = ASensorManager_getDefaultSensor(container.sensorManager, ASENSOR_TYPE_ACCELEROMETER);
     container.sensorEventQueue = ASensorManager_createEventQueue(container.sensorManager, state->looper, LOOPER_ID_USER,
             NULL, NULL);
 
-    //enableSensor(&container);
+    enableSensor(&container);
 
+    jclass activityClz = env->GetObjectClass(state->activity->clazz);
+    jmethodID metIdRead = NULL;
+    if (activityClz != NULL) {
+        metIdRead = env->GetMethodID(activityClz, "read", "([F[F[F)V");
+    }
 
-    JNIEnv* env = NULL;
-    state->activity->vm->AttachCurrentThread(&env, NULL);
-    jclass sensorMgrClz = env->FindClass("android/hardware/SensorManager");
-    jmethodID metIdGetRotationMatrix = env->GetStaticMethodID(sensorMgrClz, "getRotationMatrix", "([F[F[F[F)Z");
-    jmethodID metIdGetOrientation = env->GetStaticMethodID(sensorMgrClz, "getOrientation", "([F[F)[F");
-
-    jfloatArray jrotMatrix = env->NewFloatArray(9);
-    jfloatArray jinclMatrix = env->NewFloatArray(9);
     jfloatArray jsmoothAccel = env->NewFloatArray(3);
     jfloatArray jsmoothMag = env->NewFloatArray(3);
     jfloatArray jorientation = env->NewFloatArray(3);
@@ -207,73 +254,36 @@ void android_main(struct android_app* state) {
                     ASensorEvent event;
                     while (ASensorEventQueue_getEvents(container.sensorEventQueue,
                                                        &event, 1) > 0) {
-                        //magXAvgs[filterIdx] = atan2(event.magnetic.y, event.magnetic.x) * 180 / M_PI;
 
-                        magXAvgs[filterIdx] = event.magnetic.x;
-                        magYAvgs[filterIdx] = event.magnetic.y;
-                        magZAvgs[filterIdx] = event.magnetic.z;
-
-                        aXAvgs[filterIdx] = event.acceleration.x;
-                        aYAvgs[filterIdx] = event.acceleration.y;
-                        aZAvgs[filterIdx] = event.acceleration.z;
-
-                        filterIdx = (filterIdx + 1) % navg;
-                        if (filterCount < navg) {
-                            filterCount++;
+                        if (event.type == ASENSOR_TYPE_ACCELEROMETER) {
+                            accelAvg.add(event.acceleration.v);
                         }
-                        float div;
-                        if (filterCount > 0 && filterCount < navg) {
-                            div = filterCount;
-                        } else {
-                            div = navg;
-                        }
-                        smoothMag[0] = 0;
-                        smoothMag[1] = 0;
-                        smoothMag[2] = 0;
-                        for (int i = 0; i < div; i++) {
-                            smoothMag[0] += magXAvgs[i];
-                            smoothMag[1] += magYAvgs[i];
-                            smoothMag[2] += magZAvgs[i];
-                        }
-                        smoothMag[0] /= div;
-                        smoothMag[1] /= div;
-                        smoothMag[2] /= div;
 
-                        smoothAccel[0] = 0;
-                        smoothAccel[1] = 0;
-                        smoothAccel[2] = 0;
-                        for (int i = 0; i < div; i++) {
-                            smoothAccel[0] += aXAvgs[i];
-                            smoothAccel[1] += aYAvgs[i];
-                            smoothAccel[2] += aZAvgs[i];
+                        if (event.type == ASENSOR_TYPE_MAGNETIC_FIELD) {
+                            magAvg.add(event.magnetic.v);
                         }
-                        smoothAccel[0] /= div;
-                        smoothAccel[1] /= div;
-                        smoothAccel[2] /= div;
 
-                        env->SetFloatArrayRegion(jsmoothAccel, 0, 3, smoothAccel);
-                        env->SetFloatArrayRegion(jsmoothMag, 0, 3, smoothMag);
-                        jboolean jsuccess = env->CallStaticBooleanMethod(sensorMgrClz, metIdGetRotationMatrix, jrotMatrix, jinclMatrix, jsmoothAccel, jsmoothMag);
-                        float orientation[3];
-                        if (jsuccess) {
-                            env->CallStaticObjectMethod(sensorMgrClz, metIdGetOrientation, jrotMatrix, jorientation);
-                            env->GetFloatArrayRegion(jorientation, 0, 3, orientation);
-                            compass->rotation = orientation[0];
+                        env->SetFloatArrayRegion(jsmoothAccel, 0, 3, accelAvg.smooth);
+                        env->SetFloatArrayRegion(jsmoothMag, 0, 3, magAvg.smooth);
+
+                        //float orientation[] = {0, 0, 0};
+                        float* orientation;
+
+                        if (metIdRead != NULL) {
+                            env->CallVoidMethod(state->activity->clazz, metIdRead, jsmoothAccel, jsmoothMag, jorientation);
+                            //env->GetFloatArrayRegion(jorientation, 0, 3, orientation);
+                            orientation = env->GetFloatArrayElements(jorientation, 0);
+
+                            if (compass != NULL) {
+                                compass->rotation = orientation[0] * 180 / M_PI;
+                            }
                         }
 
                         if (secDiff != prevSecDiff) {
-                            //LOGI("azimuth %f xyz %f %f %f v %f %f %f",
-                            //        event.magnetic.azimuth,
-                            //        event.magnetic.x,
-                            //        event.magnetic.y,
-                            //        event.magnetic.z,
-                            //        event.magnetic.v[0],
-                            //        event.magnetic.v[1],
-                            //        event.magnetic.v[2]);
-                            LOGI("%d orientation %f %f %f accel %f %f %f mag %f %f %f",
-                                    jsuccess, orientation[0], orientation[1], orientation[2],
-                                    smoothAccel[0], smoothAccel[1], smoothAccel[2],
-                                    smoothMag[0], smoothMag[1], smoothMag[2]);
+                            LOGI("orientation %f %f %f accel %f %f %f mag %f %f %f",
+                                    orientation[0], orientation[1], orientation[2],
+                                    accelAvg.smooth[0], accelAvg.smooth[1], accelAvg.smooth[2],
+                                    magAvg.smooth[0], magAvg.smooth[1], magAvg.smooth[2]);
                         }
                     }
                 }
@@ -309,8 +319,6 @@ void android_main(struct android_app* state) {
         prevSecDiff = secDiff;
     }
 
-    env->DeleteLocalRef(jrotMatrix);
-    env->DeleteLocalRef(jinclMatrix);
     env->DeleteLocalRef(jsmoothAccel);
     env->DeleteLocalRef(jsmoothMag);
     env->DeleteLocalRef(jorientation);
