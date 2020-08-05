@@ -3,7 +3,6 @@ package com.mrap.compass;
 import android.app.NativeActivity;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
-import android.hardware.SensorEventCallback;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
@@ -64,6 +63,9 @@ public class CompassNativeActivity extends NativeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        System.out.println("onCreate");
+        read(new float[3], new float[3], new float[3]);
 
         //SensorManager sm = (SensorManager)getSystemService(SENSOR_SERVICE);
         //sm.registerListener(sel, sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_NORMAL);

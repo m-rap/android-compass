@@ -6,15 +6,22 @@
 #include <math.h>
 
 
-Drawable drawablePool[1024];
+Drawable* drawablePool;
 int takenDrawableCount = 0;
 GLushort nSegments = 200;
 
 
 void Drawable::deinit() {
-    LOGI("drawable deinit %08x %d %d", this, initialized, childrenCount);
+    //LOGI("drawable deinit %08x %d %d", this, initialized, childrenCount);
     if (initialized) {
         initialized = false;
+
+        if (vtxBuffer != NULL) {
+            free(vtxBuffer);
+        }
+        if (idxBuffer != NULL) {
+            free(idxBuffer);
+        }
         glDeleteBuffers(1, &vbo);
         glDeleteBuffers(1, &ibo);
 
@@ -26,7 +33,7 @@ void Drawable::deinit() {
 }
 
 void Drawable::init(Drawable* parent1) {
-    LOGI("drawable init");
+    //LOGI("drawable init");
     initialized = true;
 
     childrenCount = 0;
@@ -40,7 +47,7 @@ void Drawable::init(Drawable* parent1) {
     y = 0;
     rotation = 0;
     scale = 1;
-    lineWidth = 1;
+    //lineWidth = 1;
     parent = parent1;
 
     Drawable* tmp = this;
@@ -52,7 +59,7 @@ void Drawable::init(Drawable* parent1) {
         tmp = tmp->parent;
     }
     setColor(canvas->r, canvas->g, canvas->b, canvas->a);
-    lineWidth = canvas->lineWidth;
+    //lineWidth = canvas->lineWidth;
 }
 
 void Drawable::setColor(unsigned char r1, unsigned char g1, unsigned char b1, unsigned char a1) {
@@ -73,8 +80,11 @@ void Drawable::addTriangle(int* idx) {
 }
 
 void Drawable::_rectvtx(float x1, float y1, float width, float height) {
+    //LOGI("_rectvtx");
     x = x1;
     y = y1;
+
+    vtxBuffer = (Vertex2*)malloc(sizeof(Vertex2) * 4);
 
     addVtx(-width / 2, -height / 2);
     addVtx(width / 2, -height / 2);
@@ -83,8 +93,11 @@ void Drawable::_rectvtx(float x1, float y1, float width, float height) {
 }
 
 void Drawable::_circlevtx(float x1, float y1, float radius) {
+    //LOGI("_circlevtx");
     x = x1;
     y = y1;
+
+    vtxBuffer = (Vertex2*)malloc(sizeof(Vertex2) * (nSegments + 1));
 
     addVtx(0, 0);
     for (int i = 0; i < nSegments; i++) {
@@ -99,11 +112,14 @@ void Drawable::_rectfill(float x1, float y1, float width, float height) {
 
     mode = GL_TRIANGLES;
 
+    idxBuffer = (GLushort*)malloc(sizeof(GLushort) * 6);
+
     int idx1[] = {vtxBuffSize - (GLushort)4, vtxBuffSize - (GLushort)3, vtxBuffSize - (GLushort)2};
     addTriangle(idx1);
 
     int idx2[] = {vtxBuffSize - (GLushort)4, vtxBuffSize - (GLushort)2, vtxBuffSize - (GLushort)1};
     addTriangle(idx2);
+    //LOGI("_rectfill %d", idxBuffSize);
 }
 
 void Drawable::_circlefill(float x1, float y1, float radius) {
@@ -111,33 +127,42 @@ void Drawable::_circlefill(float x1, float y1, float radius) {
 
     mode = GL_TRIANGLE_FAN;
 
+    idxBuffer = (GLushort*)malloc(sizeof(GLushort) * (nSegments + 1));
+
     GLushort idxStart = vtxBuffSize - nSegments - 1;
-    for (GLushort i = 0; i < nSegments - 1; i++) {
+    for (GLushort i = 0; i < nSegments; i++) {
         idxBuffer[idxBuffSize++] = idxStart + i;
     }
     idxBuffer[idxBuffSize++] = idxStart + 1;
+    //LOGI("_circlefill %d", idxBuffSize);
 }
 
-void Drawable::_rectstroke(float x1, float y1, float width, float height) {
-    _rectvtx(x1, y1, width, height);
-
-    mode = GL_LINE_LOOP;
-
-    idxBuffer[idxBuffSize++] = vtxBuffSize - 4;
-    idxBuffer[idxBuffSize++] = vtxBuffSize - 3;
-    idxBuffer[idxBuffSize++] = vtxBuffSize - 2;
-    idxBuffer[idxBuffSize++] = vtxBuffSize - 1;
-}
-
-void Drawable::_circlestroke(float x, float y, float radius) {
-    _circlevtx(x, y, radius);
-
-    mode = GL_LINE_LOOP;
-
-    for (GLushort i = 0; i < nSegments; i++) {
-        idxBuffer[idxBuffSize++] = i;
-    }
-}
+//void Drawable::_rectstroke(float x1, float y1, float width, float height) {
+//    _rectvtx(x1, y1, width, height);
+//
+//    mode = GL_LINE_LOOP;
+//
+//    idxBuffer = (GLushort*)malloc(sizeof(GLushort) * 4);
+//
+//    idxBuffer[idxBuffSize++] = vtxBuffSize - 4;
+//    idxBuffer[idxBuffSize++] = vtxBuffSize - 3;
+//    idxBuffer[idxBuffSize++] = vtxBuffSize - 2;
+//    idxBuffer[idxBuffSize++] = vtxBuffSize - 1;
+//}
+//
+//void Drawable::_circlestroke(float x, float y, float radius) {
+//    //LOGI("_circlestroke");
+//    _circlevtx(x, y, radius);
+//
+//    mode = GL_LINE_LOOP;
+//
+//    idxBuffer = (GLushort*)malloc(sizeof(GLushort) * nSegments);
+//
+//    int idxStart = vtxBuffSize - nSegments - 1;
+//    for (GLushort i = 0; i < nSegments - 1; i++) {
+//        idxBuffer[idxBuffSize++] = idxStart + i;
+//    }
+//}
 
 //void _rectvtx(Drawable& d, float x1, float y1, float width, float height) {
 //    d.x = x1;
@@ -260,19 +285,21 @@ Drawable* Drawable::circlefill(float x1, float y1, float radius) {
     return d;
 }
 
-Drawable* Drawable::rectstroke(float x1, float y1, float width, float height) {
-    Drawable* d = addchild();
-    d->_rectstroke(x1, y1, width, height);
-    return d;
-}
-
-Drawable* Drawable::circlestroke(float x1, float y1, float radius) {
-    Drawable* d = addchild();
-    d->_circlestroke(x1, y1, radius);
-    return d;
-}
+//Drawable* Drawable::rectstroke(float x1, float y1, float width, float height) {
+//    Drawable* d = addchild();
+//    d->_rectstroke(x1, y1, width, height);
+//    return d;
+//}
+//
+//Drawable* Drawable::circlestroke(float x1, float y1, float radius) {
+//    Drawable* d = addchild();
+//    d->_circlestroke(x1, y1, radius);
+//    return d;
+//}
 
 void Drawable::end() {
+    //LOGI("taken %d", takenDrawableCount);
+    //LOGI("bufferdata %d %d", vtxBuffSize, idxBuffSize);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, vtxBuffSize * sizeof(Vertex2), vtxBuffer, GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -295,7 +322,7 @@ void Drawable::draw() {
     glScalef(scale, scale, scale);
 
     if (idxBuffSize > 0) {
-        glLineWidth(lineWidth);
+        //glLineWidth(lineWidth);
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glEnableClientState(GL_VERTEX_ARRAY);
         glEnableClientState(GL_COLOR_ARRAY);
@@ -319,6 +346,8 @@ void Drawable::draw() {
 }
 
 void Canvas::init() {
+    drawablePool = (Drawable*)malloc(sizeof(Drawable) * 1024);
+
     LOGI("canvas init");
     clzparent.init(NULL);
     takenDrawableCount = 0;
@@ -339,6 +368,8 @@ void Canvas::init() {
 void Canvas::deinit() {
     clzparent.deinit();
     takenDrawableCount = 0;
+
+    free(drawablePool);
 }
 
 void Canvas::draw() {

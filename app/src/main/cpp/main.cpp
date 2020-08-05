@@ -31,6 +31,8 @@ void constructDraw(Container* container1) {
     canvas.setColor(255, 0, 0, 255);
     Drawable* hand = compass->addchild();
     float handRadius = 0.7 - 80 * s1px;
+    hand->vtxBuffer = (Vertex2*)malloc(sizeof(Vertex2) * 4);
+    hand->idxBuffer = (GLushort *)malloc(sizeof(GLushort) * 6);
     hand->addVtx(0, handRadius);
     hand->addVtx(50 * s1px, 0);
     hand->addVtx(-50 * s1px, 0);
@@ -200,6 +202,10 @@ void android_main(struct android_app* state) {
     JNIEnv* env = NULL;
     state->activity->vm->AttachCurrentThread(&env, NULL);
 
+    jclass activityClz = env->GetObjectClass(state->activity->clazz);
+    jmethodID metIdRead = NULL;
+    metIdRead = env->GetMethodID(activityClz, "read", "([F[F[F)V");
+
     Container container;
     container.running = false;
     container.animating = false;
@@ -213,12 +219,6 @@ void android_main(struct android_app* state) {
             NULL, NULL);
 
     enableSensor(&container);
-
-    jclass activityClz = env->GetObjectClass(state->activity->clazz);
-    jmethodID metIdRead = NULL;
-    if (activityClz != NULL) {
-        metIdRead = env->GetMethodID(activityClz, "read", "([F[F[F)V");
-    }
 
     jfloatArray jsmoothAccel = env->NewFloatArray(3);
     jfloatArray jsmoothMag = env->NewFloatArray(3);
@@ -269,21 +269,19 @@ void android_main(struct android_app* state) {
                         //float orientation[] = {0, 0, 0};
                         float* orientation;
 
-                        if (metIdRead != NULL) {
-                            env->CallVoidMethod(state->activity->clazz, metIdRead, jsmoothAccel, jsmoothMag, jorientation);
-                            //env->GetFloatArrayRegion(jorientation, 0, 3, orientation);
-                            orientation = env->GetFloatArrayElements(jorientation, 0);
+                        env->CallVoidMethod(state->activity->clazz, metIdRead, jsmoothAccel, jsmoothMag, jorientation);
+                        //env->GetFloatArrayRegion(jorientation, 0, 3, orientation);
+                        orientation = env->GetFloatArrayElements(jorientation, 0);
 
-                            if (compass != NULL) {
-                                compass->rotation = orientation[0] * 180 / M_PI;
-                            }
+                        if (compass != NULL) {
+                            compass->rotation = orientation[0] * 180 / M_PI;
                         }
 
                         if (secDiff != prevSecDiff) {
-                            LOGI("orientation %f %f %f accel %f %f %f mag %f %f %f",
-                                    orientation[0], orientation[1], orientation[2],
-                                    accelAvg.smooth[0], accelAvg.smooth[1], accelAvg.smooth[2],
-                                    magAvg.smooth[0], magAvg.smooth[1], magAvg.smooth[2]);
+                            //LOGI("orientation %f %f %f accel %f %f %f mag %f %f %f",
+                            //        orientation[0], orientation[1], orientation[2],
+                            //        accelAvg.smooth[0], accelAvg.smooth[1], accelAvg.smooth[2],
+                            //        magAvg.smooth[0], magAvg.smooth[1], magAvg.smooth[2]);
                         }
                     }
                 }
@@ -304,7 +302,7 @@ void android_main(struct android_app* state) {
         }
 
         if (secDiff != prevSecDiff) {
-            LOGI("fps %d", fps);
+            //LOGI("fps %d", fps);
             if (compass != NULL) {
             }
             fps = 0;
