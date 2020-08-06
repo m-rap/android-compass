@@ -65,6 +65,7 @@ public class CompassNativeActivity extends NativeActivity {
 
                 txtDegree = new TextView(that);
                 txtDegree.setTextSize(TypedValue.COMPLEX_UNIT_PT, 20);
+                txtDegree.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
                 txtDegree.setText("0");
                 txtDegree.setTextColor(Color.parseColor("#ffffffff"));
                 txtDegree.invalidate();

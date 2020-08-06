@@ -245,7 +245,7 @@ void android_main(struct android_app* state) {
     state->userData = &container;
     state->onAppCmd = engine_handle_cmd;
 
-    float layoutHeight = 0;
+    //float layoutHeight = 0;
 
     int fps = 0;
 
@@ -336,8 +336,9 @@ void android_main(struct android_app* state) {
         }
 
         if (container.running && container.animating) {
-            if (layoutHeight == 0) {
-                layoutHeight = env->CallFloatMethod(state->activity->clazz, metIdGetLayoutHeight);
+            //if (layoutHeight == 0) {
+            if (container.canvas.height == container.height) {
+                float layoutHeight = env->CallFloatMethod(state->activity->clazz, metIdGetLayoutHeight);
                 if (layoutHeight != 0) {
                     //float barH = container.height - layoutHeight;
                     container.canvas.resize(container.width, layoutHeight);
