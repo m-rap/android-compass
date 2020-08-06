@@ -5,6 +5,7 @@ import android.app.NativeActivity;
 import android.graphics.Color;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,12 +18,14 @@ public class CompassNativeActivity extends NativeActivity {
     RelativeLayout layout;
     TextView txtDegree;
     PopupWindow popupWindow = null;
+    float degree = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         //getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE);
+        //getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_VISIBLE);
     }
 
     public void showUi() {
@@ -41,16 +44,42 @@ public class CompassNativeActivity extends NativeActivity {
 
                 that.setContentView(layout, mlp);
 
+                //layout.invalidate();
+                //DisplayMetrics displayMetrics = new DisplayMetrics();
+                //getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+                //int height = displayMetrics.heightPixels;
+                //int actBarH = height - layout.getHeight();
+                //
+                //mlp.setMargins(0, -actBarH, 0, 0);
 
+                layout.invalidate();
+                System.out.println("layout height " + layout.getHeight());
 
                 txtDegree = new TextView(that);
-                txtDegree.setText("0000");
+                txtDegree.setText("0");
                 txtDegree.setTextColor(Color.parseColor("#ffffffff"));
+                txtDegree.invalidate();
+
+
 
                 popupWindow = new PopupWindow(txtDegree, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                popupWindow.showAtLocation(layout, Gravity.TOP | Gravity.START, 100, 100);
+                //popupWindow.showAtLocation(layout, Gravity.TOP | Gravity.START, 100, 100);
+                popupWindow.showAtLocation(layout, Gravity.CENTER, 0, 0);
             }
         });
+    }
+
+    public void setDegree(float degree1) {
+        this.degree = degree1;
+        if (txtDegree != null) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    //txtDegree.setText(String.format("%d", Math.round(degree)));
+                    txtDegree.setText(String.format("%.1f", degree));
+                }
+            });
+        }
     }
 
     public void read(float[] accel, float[] mag, float[] orientation) {
@@ -58,13 +87,6 @@ public class CompassNativeActivity extends NativeActivity {
         boolean success = SensorManager.getRotationMatrix(r, i, accel, mag);
         if (success) {
             SensorManager.getOrientation(r, orientation);
-            final float deg = (float)(orientation[0] * 180 / Math.PI);
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    txtDegree.setText(String.format("%.2f", deg));
-                }
-            });
         }
     }
 }

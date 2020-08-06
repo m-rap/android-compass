@@ -11,27 +11,41 @@ Drawable* compass = NULL;
 void constructDraw(Container* container1) {
     Drawable& canvas = *(Drawable*)&container1->canvas;
     float s1px = 1 / ((Canvas*)&canvas)->small;
+    //float linewidth = 10 * s1px;
+    float linewidth = 0.01;
+    LOGI("s1px %f linewidth %f", s1px, linewidth);
 
     compass = canvas.addchild();
     canvas.setColor(255, 255, 255, 255);
     Drawable* circ1 = compass->circlefill(0, 0, 0.7);
     canvas.setColor(0, 0, 0, 255);
-    Drawable* circ2 = compass->circlefill(0, 0, 0.7 - 10 * s1px);
+    Drawable* circ2 = compass->circlefill(0, 0, 0.7 - linewidth);
     canvas.setColor(255, 255, 255, 255);
 
-    float needleRadius = 0.7 - 35 * s1px;
+    float needleLength = 0.07;
+    //float needleRadius = 0.7 - 35 * s1px;
+    float needleRadius = 0.7 - needleLength / 2;
 
     for (int i = 0; i < 36; i++) {
         double degree = i * 10;
         double radians = degree * M_PI / 180;
-        float x = (float)(cos(radians) * needleRadius), y = (float)(sin(radians) * needleRadius);
-        Drawable* needle = compass->rectfill(x, y, 70 * s1px, 10 * s1px);
+        float r;
+        float nl;
+        if (i % 9 == 0) {
+            nl = needleLength + 0.07;
+            r = needleRadius - 0.035;
+        } else {
+            nl = needleLength;
+            r = needleRadius;
+        }
+        float x = (float)(cos(radians) * r), y = (float)(sin(radians) * r);
+        Drawable* needle = compass->rectfill(x, y, nl, linewidth);
         needle->rotation = degree;
     }
 
     canvas.setColor(255, 0, 0, 255);
     Drawable* hand = compass->addchild();
-    float handRadius = 0.7 - 80 * s1px;
+    float handRadius = 0.7 - 0.2;
     hand->vtxBuffer = (Vertex2*)malloc(sizeof(Vertex2) * 3);
     hand->idxBuffer = (GLushort *)malloc(sizeof(GLushort) * 3);
     hand->addVtx(0, handRadius);
@@ -96,7 +110,7 @@ struct Filter {
 //    }
 };
 
-Filter accelFilter, magFilter;
+Filter accelFilter, magFilter;//, oriFilter;
 
 bool sensorEnabled = false;
 
@@ -205,6 +219,7 @@ void android_main(struct android_app* state) {
     jclass activityClz = env->GetObjectClass(state->activity->clazz);
     jmethodID metIdRead =  env->GetMethodID(activityClz, "read", "([F[F[F)V");
     jmethodID metIdShowUi =  env->GetMethodID(activityClz, "showUi", "()V");
+    jmethodID metIdSetDegree =  env->GetMethodID(activityClz, "setDegree", "(F)V");
 
     Container container;
     container.running = false;
@@ -277,7 +292,15 @@ void android_main(struct android_app* state) {
                         orientation = env->GetFloatArrayElements(jorientation, 0);
 
                         if (compass != NULL) {
-                            compass->rotation = orientation[0] * 180 / M_PI;
+                            float ori[3];
+                            for (int i = 0; i < 3; i++)
+                                ori[i] = orientation[i] * 180 / M_PI;
+                            //oriFilter.add(ori);
+                            //env->CallVoidMethod(state->activity->clazz, metIdSetDegree, oriFilter.smooth[0]);
+                            env->CallVoidMethod(state->activity->clazz, metIdSetDegree, roundf(ori[0] * 2) / 2);
+                            //env->CallVoidMethod(state->activity->clazz, metIdSetDegree, roundf(oriFilter.smooth[0] * 2) / 2);
+                            compass->rotation = ori[0];
+                            //compass->rotation = oriFilter.smooth[0];
                         }
 
                         if (secDiff != prevSecDiff) {
