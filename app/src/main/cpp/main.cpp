@@ -4,6 +4,7 @@
 
 #include "Container.h"
 #include <string.h>
+#include <dlfcn.h>
 
 Drawable* compass = NULL;
 
@@ -31,16 +32,16 @@ void constructDraw(Container* container1) {
     canvas.setColor(255, 0, 0, 255);
     Drawable* hand = compass->addchild();
     float handRadius = 0.7 - 80 * s1px;
-    hand->vtxBuffer = (Vertex2*)malloc(sizeof(Vertex2) * 4);
-    hand->idxBuffer = (GLushort *)malloc(sizeof(GLushort) * 6);
+    hand->vtxBuffer = (Vertex2*)malloc(sizeof(Vertex2) * 3);
+    hand->idxBuffer = (GLushort *)malloc(sizeof(GLushort) * 3);
     hand->addVtx(0, handRadius);
-    hand->addVtx(50 * s1px, 0);
-    hand->addVtx(-50 * s1px, 0);
-    hand->addVtx(0, -handRadius);
+    hand->addVtx(50 * s1px, handRadius - 100 * s1px);
+    hand->addVtx(-50 * s1px, handRadius - 100 * s1px);
+    //hand->addVtx(0, -handRadius);
     int tr1[] = {0, 2, 1};
-    int tr2[] = {1, 2, 3};
+    //int tr2[] = {1, 2, 3};
     hand->addTriangle(tr1);
-    hand->addTriangle(tr2);
+    //hand->addTriangle(tr2);
     hand->mode = GL_TRIANGLES;
 
     canvas.end();
@@ -95,7 +96,7 @@ struct Filter {
 //    }
 };
 
-Filter accelAvg, magAvg;
+Filter accelFilter, magFilter;
 
 bool sensorEnabled = false;
 
@@ -104,8 +105,8 @@ void enableSensor(Container* container1) {
         return;
     sensorEnabled = true;
 
-    memset(&accelAvg, 0, sizeof(Filter));
-    memset(&magAvg, 0, sizeof(Filter));
+    memset(&accelFilter, 0, sizeof(Filter));
+    memset(&magFilter, 0, sizeof(Filter));
 
     ASensorEventQueue_enableSensor(container1->sensorEventQueue, container1->compassSensor);
     ASensorEventQueue_enableSensor(container1->sensorEventQueue, container1->accelSensor);
@@ -127,12 +128,17 @@ void engine_handle_cmd(struct android_app* app, int32_t cmd) {
         return;
     }
     Container* container1 = (Container*)app->userData;
+    JNIEnv* env = container1->env;
+    jmethodID metIdShowUi = container1->metIdShowUi;
     switch (cmd) {
         case APP_CMD_SAVE_STATE:
             break;
         case APP_CMD_INIT_WINDOW:
             if (container1->app->window != nullptr) {
                 container1->initEgl();
+                if (env != NULL) {
+                    env->CallVoidMethod(app->activity->clazz, metIdShowUi);
+                }
                 constructDraw(container1);
             }
             break;
@@ -153,8 +159,6 @@ void engine_handle_cmd(struct android_app* app, int32_t cmd) {
     LOGI("engine_handle_cmd %d done", cmd);
 }
 
-#include <dlfcn.h>
-//ASensorManager* aquireASensorManagerInstance(android_app* app) {
 ASensorManager* aquireASensorManagerInstance(android_app* app, JNIEnv* env) {
     if(!app)
         return NULL;
@@ -164,8 +168,6 @@ ASensorManager* aquireASensorManagerInstance(android_app* app, JNIEnv* env) {
     GetInstanceForPackage gfpFunc = (GetInstanceForPackage)dlsym(androidHandle, "ASensorManager_getInstanceForPackage");
 
     if (gfpFunc) {
-        //JNIEnv* env = NULL;
-        //app->activity->vm->AttachCurrentThread(&env, NULL);
 
         jclass activityClz = env->GetObjectClass(app->activity->clazz);
         jmethodID midGetPackageName = env->GetMethodID(activityClz, "getPackageName", "()Ljava/lang/String;");
@@ -174,8 +176,6 @@ ASensorManager* aquireASensorManagerInstance(android_app* app, JNIEnv* env) {
         const char *nativePackageName = env->GetStringUTFChars(packageName, NULL);
         ASensorManager* mgr = gfpFunc(nativePackageName);
         env->ReleaseStringUTFChars(packageName, nativePackageName);
-
-        //app->activity->vm->DetachCurrentThread();
 
         if (mgr) {
             dlclose(androidHandle);
@@ -203,13 +203,16 @@ void android_main(struct android_app* state) {
     state->activity->vm->AttachCurrentThread(&env, NULL);
 
     jclass activityClz = env->GetObjectClass(state->activity->clazz);
-    jmethodID metIdRead = NULL;
-    metIdRead = env->GetMethodID(activityClz, "read", "([F[F[F)V");
+    jmethodID metIdRead =  env->GetMethodID(activityClz, "read", "([F[F[F)V");
+    jmethodID metIdShowUi =  env->GetMethodID(activityClz, "showUi", "()V");
 
     Container container;
     container.running = false;
     container.animating = false;
     container.compassSensor = NULL;
+    container.env = env;
+    container.activityClz = activityClz;
+    container.metIdShowUi = metIdShowUi;
 
     container.app = state;
     container.sensorManager = aquireASensorManagerInstance(state, env);
@@ -256,15 +259,15 @@ void android_main(struct android_app* state) {
                                                        &event, 1) > 0) {
 
                         if (event.type == ASENSOR_TYPE_ACCELEROMETER) {
-                            accelAvg.add(event.acceleration.v);
+                            accelFilter.add(event.acceleration.v);
                         }
 
                         if (event.type == ASENSOR_TYPE_MAGNETIC_FIELD) {
-                            magAvg.add(event.magnetic.v);
+                            magFilter.add(event.magnetic.v);
                         }
 
-                        env->SetFloatArrayRegion(jsmoothAccel, 0, 3, accelAvg.smooth);
-                        env->SetFloatArrayRegion(jsmoothMag, 0, 3, magAvg.smooth);
+                        env->SetFloatArrayRegion(jsmoothAccel, 0, 3, accelFilter.smooth);
+                        env->SetFloatArrayRegion(jsmoothMag, 0, 3, magFilter.smooth);
 
                         //float orientation[] = {0, 0, 0};
                         float* orientation;
@@ -280,8 +283,8 @@ void android_main(struct android_app* state) {
                         if (secDiff != prevSecDiff) {
                             //LOGI("orientation %f %f %f accel %f %f %f mag %f %f %f",
                             //        orientation[0], orientation[1], orientation[2],
-                            //        accelAvg.smooth[0], accelAvg.smooth[1], accelAvg.smooth[2],
-                            //        magAvg.smooth[0], magAvg.smooth[1], magAvg.smooth[2]);
+                            //        accelFilter.smooth[0], accelFilter.smooth[1], accelFilter.smooth[2],
+                            //        magFilter.smooth[0], magFilter.smooth[1], magFilter.smooth[2]);
                         }
                     }
                 }

@@ -1,76 +1,56 @@
 package com.mrap.compass;
 
+import android.app.Activity;
 import android.app.NativeActivity;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
+import android.graphics.Color;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.PopupWindow;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 public class CompassNativeActivity extends NativeActivity {
 
-    float[] accel = new float[3];
-    float[] mag = new float[3];
-    float[] gyro = new float[3];
-
-    long start = 0;
-    long sec = 0;
-    long prevSec = 0;
-
-    SensorEventListener sel = new SensorEventListener() {
-        @Override
-        public void onSensorChanged(SensorEvent sensorEvent) {
-            if (sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-                accel = sensorEvent.values;
-            }
-            if (sensorEvent.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
-                gyro = sensorEvent.values;
-            }
-            if (sensorEvent.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
-                mag = sensorEvent.values;
-            }
-
-            if (start == 0) {
-                start = System.currentTimeMillis();
-            }
-
-            long diff = System.currentTimeMillis() - start;
-            sec = diff / 1000;
-            if (sec != prevSec) {
-                StringBuilder values = new StringBuilder();
-                float[][] tmpf = new float[][] {accel, mag, gyro};
-                for (float[] tmpfel : tmpf) {
-                    for (int i = 0; i < tmpfel.length; i++) {
-                        values.append(tmpfel[i] + "");
-                        if (i < tmpfel.length - 1) {
-                            values.append(",");
-                        }
-                    }
-                    values.append(" :: ");
-                }
-                System.out.println("onSensorChanged " + values.toString());
-            }
-
-            prevSec = sec;
-        }
-
-        @Override
-        public void onAccuracyChanged(Sensor sensor, int i) {
-
-        }
-    };
+    RelativeLayout layout;
+    TextView txtDegree;
+    PopupWindow popupWindow = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        System.out.println("onCreate");
-        read(new float[3], new float[3], new float[3]);
+        //getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE);
+    }
 
-        //SensorManager sm = (SensorManager)getSystemService(SENSOR_SERVICE);
-        //sm.registerListener(sel, sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_NORMAL);
-        //sm.registerListener(sel, sm.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD), SensorManager.SENSOR_DELAY_NORMAL);
-        //sm.registerListener(sel, sm.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_NORMAL);
+    public void showUi() {
+        if (popupWindow != null) {
+            return;
+        }
+
+        final Activity that = this;
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                layout = new RelativeLayout(that);
+
+                ViewGroup.MarginLayoutParams mlp = new ViewGroup.MarginLayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                mlp.setMargins(0, 0, 0, 0);
+
+                that.setContentView(layout, mlp);
+
+
+
+                txtDegree = new TextView(that);
+                txtDegree.setText("0000");
+                txtDegree.setTextColor(Color.parseColor("#ffffffff"));
+
+                popupWindow = new PopupWindow(txtDegree, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                popupWindow.showAtLocation(layout, Gravity.TOP | Gravity.START, 100, 100);
+            }
+        });
     }
 
     public void read(float[] accel, float[] mag, float[] orientation) {
@@ -78,9 +58,13 @@ public class CompassNativeActivity extends NativeActivity {
         boolean success = SensorManager.getRotationMatrix(r, i, accel, mag);
         if (success) {
             SensorManager.getOrientation(r, orientation);
-        }
-        if (prevSec != sec) {
-            System.out.println("java " + success);
+            final float deg = (float)(orientation[0] * 180 / Math.PI);
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    txtDegree.setText(String.format("%.2f", deg));
+                }
+            });
         }
     }
 }

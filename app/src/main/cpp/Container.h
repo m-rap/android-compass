@@ -39,6 +39,10 @@ struct Container {
 
     Canvas canvas;
 
+    JNIEnv* env = NULL;
+    jclass activityClz;
+    jmethodID metIdShowUi;
+
     ASensorManager* sensorManager;
     const ASensor* compassSensor;
     const ASensor* accelSensor;
