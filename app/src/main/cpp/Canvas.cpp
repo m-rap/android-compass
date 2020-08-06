@@ -4,6 +4,7 @@
 
 #include "Canvas.h"
 #include <math.h>
+#include "Container.h"
 
 
 Drawable* drawablePool;
@@ -356,13 +357,19 @@ void Canvas::init() {
     glEnable(GL_CULL_FACE);
     //glShadeModel(GL_SMOOTH);
     glDisable(GL_DEPTH_TEST);
+}
+
+void Canvas::resize(int w, int h) {
+    width = w;
+    height = h;
     small = width;
     big = height;
     if (height < width) {
         small = height;
         big = width;
     }
-    glViewport(0, big/4, small, small);
+    LOGI("barH %f", height - big);
+    glViewport(0, big/4 - (container->height - big) / 2, small, small);
 }
 
 void Canvas::deinit() {

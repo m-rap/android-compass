@@ -84,8 +84,6 @@ int Container::initEgl() {
 
     width = w;
     height = h;
-    canvas.width = w;
-    canvas.height = h;
     this->display = display;
     this->surface = surface;
     this->context = context;
@@ -103,7 +101,9 @@ int Container::initEgl() {
     //LOGI("cdt %08x surface %08x cr %08x", cdt, crSurface, cr);
     //LOGI("cr w %d h %d", cairo_gl_surface_get_width(crSurface), cairo_gl_surface_get_height(crSurface));
 
+    canvas.container = this;
     canvas.init();
+    canvas.resize(w, h);
 
     running = true;
 

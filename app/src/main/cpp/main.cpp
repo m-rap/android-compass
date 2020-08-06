@@ -6,7 +6,59 @@
 #include <string.h>
 #include <dlfcn.h>
 
+//const int navg = 60;
+float alpha = 0.05;
+
+struct Filter {
+    float smooth[3];
+
+    void add(float* v) {
+        for (int i = 0; i < 3; i++) {
+            smooth[i] = smooth[i] + alpha * (v[i] - smooth[i]);
+            //smooth[i] = prev[i] + alpha * (v[i] - prev[i]);
+            //LOGI("%f %f %f %f %f", smooth[i], prev[i], v[i], (v[i] - prev[i]), alpha * (v[i] - prev[i]));
+            //prev[i] = smooth[i];
+        }
+    }
+
+//    float x[navg], y[navg], z[navg];
+//    int idx = 0;
+//    int count = 0;
+
+//    void add(float* v) {
+//        x[idx] = v[0];
+//        y[idx] = v[1];
+//        z[idx] = v[2];
+//        idx = (idx + 1) % navg;
+//        if (count < navg) {
+//            count++;
+//        }
+//
+//        int div;
+//        if (count > 1 && count < navg) {
+//            div = count;
+//        } else {
+//            div = navg;
+//        }
+//
+//        smooth[0] = 0;
+//        smooth[1] = 0;
+//        smooth[2] = 0;
+//        for (int i = 0; i < div; i++) {
+//            smooth[0] += x[i];
+//            smooth[1] += y[i];
+//            smooth[2] += z[i];
+//        }
+//        smooth[0] /= div;
+//        smooth[1] /= div;
+//        smooth[2] /= div;
+//    }
+};
+
 Drawable* compass = NULL;
+Filter accelFilter, magFilter;//, oriFilter;
+bool sensorEnabled = false;
+Container container;
 
 void constructDraw(Container* container1) {
     Drawable& canvas = *(Drawable*)&container1->canvas;
@@ -60,59 +112,6 @@ void constructDraw(Container* container1) {
 
     canvas.end();
 }
-
-//const int navg = 60;
-float alpha = 0.05;
-
-struct Filter {
-    float smooth[3];
-
-    void add(float* v) {
-        for (int i = 0; i < 3; i++) {
-            smooth[i] = smooth[i] + alpha * (v[i] - smooth[i]);
-            //smooth[i] = prev[i] + alpha * (v[i] - prev[i]);
-            //LOGI("%f %f %f %f %f", smooth[i], prev[i], v[i], (v[i] - prev[i]), alpha * (v[i] - prev[i]));
-            //prev[i] = smooth[i];
-        }
-    }
-
-//    float x[navg], y[navg], z[navg];
-//    int idx = 0;
-//    int count = 0;
-
-//    void add(float* v) {
-//        x[idx] = v[0];
-//        y[idx] = v[1];
-//        z[idx] = v[2];
-//        idx = (idx + 1) % navg;
-//        if (count < navg) {
-//            count++;
-//        }
-//
-//        int div;
-//        if (count > 1 && count < navg) {
-//            div = count;
-//        } else {
-//            div = navg;
-//        }
-//
-//        smooth[0] = 0;
-//        smooth[1] = 0;
-//        smooth[2] = 0;
-//        for (int i = 0; i < div; i++) {
-//            smooth[0] += x[i];
-//            smooth[1] += y[i];
-//            smooth[2] += z[i];
-//        }
-//        smooth[0] /= div;
-//        smooth[1] /= div;
-//        smooth[2] /= div;
-//    }
-};
-
-Filter accelFilter, magFilter;//, oriFilter;
-
-bool sensorEnabled = false;
 
 void enableSensor(Container* container1) {
     if (sensorEnabled || container1->compassSensor == NULL)
@@ -220,8 +219,8 @@ void android_main(struct android_app* state) {
     jmethodID metIdRead =  env->GetMethodID(activityClz, "read", "([F[F[F)V");
     jmethodID metIdShowUi =  env->GetMethodID(activityClz, "showUi", "()V");
     jmethodID metIdSetDegree =  env->GetMethodID(activityClz, "setDegree", "(F)V");
+    jmethodID metIdGetLayoutHeight =  env->GetMethodID(activityClz, "getLayoutHeight", "()F");
 
-    Container container;
     container.running = false;
     container.animating = false;
     container.compassSensor = NULL;
@@ -245,6 +244,8 @@ void android_main(struct android_app* state) {
 
     state->userData = &container;
     state->onAppCmd = engine_handle_cmd;
+
+    float layoutHeight = 0;
 
     int fps = 0;
 
@@ -335,6 +336,13 @@ void android_main(struct android_app* state) {
         }
 
         if (container.running && container.animating) {
+            if (layoutHeight == 0) {
+                layoutHeight = env->CallFloatMethod(state->activity->clazz, metIdGetLayoutHeight);
+                if (layoutHeight != 0) {
+                    //float barH = container.height - layoutHeight;
+                    container.canvas.resize(container.width, layoutHeight);
+                }
+            }
             container.draw();
         }
 

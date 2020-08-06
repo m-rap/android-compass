@@ -77,11 +77,17 @@ struct Drawable {
     void draw();
 };
 
+struct Container;
+
 struct Canvas {
     Drawable clzparent;
 
+    Container* container;
+
     float width, height;
     float small, big;
+
+    void resize(int w, int h);
 
     void init();
     void deinit();

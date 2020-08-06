@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,7 +16,7 @@ import android.widget.TextView;
 
 public class CompassNativeActivity extends NativeActivity {
 
-    RelativeLayout layout;
+    RelativeLayout layout = null;
     TextView txtDegree;
     PopupWindow popupWindow = null;
     float degree = 0;
@@ -39,8 +40,9 @@ public class CompassNativeActivity extends NativeActivity {
             public void run() {
                 layout = new RelativeLayout(that);
 
-                ViewGroup.MarginLayoutParams mlp = new ViewGroup.MarginLayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                mlp.setMargins(0, 0, 0, 0);
+                //ViewGroup.MarginLayoutParams mlp = new ViewGroup.MarginLayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                ViewGroup.MarginLayoutParams mlp = new ViewGroup.MarginLayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+                //mlp.setMargins(0, 0, 0, 0);
 
                 that.setContentView(layout, mlp);
 
@@ -52,10 +54,17 @@ public class CompassNativeActivity extends NativeActivity {
                 //
                 //mlp.setMargins(0, -actBarH, 0, 0);
 
-                layout.invalidate();
-                System.out.println("layout height " + layout.getHeight());
+                //layout.post(new Runnable() {
+                //    @Override
+                //    public void run() {
+                //        //DisplayMetrics displayMetrics = new DisplayMetrics();
+                //        //getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+                //        //System.out.println("layout height " + layout.getHeight() + " " + displayMetrics.heightPixels);
+                //    }
+                //});
 
                 txtDegree = new TextView(that);
+                txtDegree.setTextSize(TypedValue.COMPLEX_UNIT_PT, 20);
                 txtDegree.setText("0");
                 txtDegree.setTextColor(Color.parseColor("#ffffffff"));
                 txtDegree.invalidate();
@@ -80,6 +89,12 @@ public class CompassNativeActivity extends NativeActivity {
                 }
             });
         }
+    }
+
+    public float getLayoutHeight() {
+        if (layout == null)
+            return 0;
+        return layout.getHeight();
     }
 
     public void read(float[] accel, float[] mag, float[] orientation) {
