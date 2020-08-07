@@ -16,48 +16,12 @@ struct Filter {
     void add(float* v) {
         for (int i = 0; i < 3; i++) {
             smooth[i] = smooth[i] + alpha * (v[i] - smooth[i]);
-            //smooth[i] = prev[i] + alpha * (v[i] - prev[i]);
-            //LOGI("%f %f %f %f %f", smooth[i], prev[i], v[i], (v[i] - prev[i]), alpha * (v[i] - prev[i]));
-            //prev[i] = smooth[i];
         }
     }
-
-//    float x[navg], y[navg], z[navg];
-//    int idx = 0;
-//    int count = 0;
-
-//    void add(float* v) {
-//        x[idx] = v[0];
-//        y[idx] = v[1];
-//        z[idx] = v[2];
-//        idx = (idx + 1) % navg;
-//        if (count < navg) {
-//            count++;
-//        }
-//
-//        int div;
-//        if (count > 1 && count < navg) {
-//            div = count;
-//        } else {
-//            div = navg;
-//        }
-//
-//        smooth[0] = 0;
-//        smooth[1] = 0;
-//        smooth[2] = 0;
-//        for (int i = 0; i < div; i++) {
-//            smooth[0] += x[i];
-//            smooth[1] += y[i];
-//            smooth[2] += z[i];
-//        }
-//        smooth[0] /= div;
-//        smooth[1] /= div;
-//        smooth[2] /= div;
-//    }
 };
 
 Drawable* compass = NULL;
-Filter accelFilter, magFilter;//, oriFilter;
+Filter accelFilter, magFilter;
 bool sensorEnabled = false;
 Container container;
 
@@ -79,21 +43,30 @@ void constructDraw(Container* container1) {
     //float needleRadius = 0.7 - 35 * s1px;
     float needleRadius = 0.7 - needleLength / 2;
 
-    for (int i = 0; i < 36; i++) {
-        double degree = i * 10;
+    for (int degree = 0; degree < 360; degree += 5) {
         double radians = degree * M_PI / 180;
         float r;
         float nl;
-        if (i % 9 == 0) {
+        //if (degree % 90 == 0) {
+        if (degree % 45 == 0) {
             nl = needleLength + 0.07;
             r = needleRadius - 0.035;
+        } else if (degree % 5 == 0 && degree % 10 != 0) {
+            nl = needleLength - 0.02;
+            r = needleRadius + 0.01;
         } else {
             nl = needleLength;
             r = needleRadius;
         }
+
         float x = (float)(cos(radians) * r), y = (float)(sin(radians) * r);
         Drawable* needle = compass->rectfill(x, y, nl, linewidth);
+
+        float xOuter = (float)(cos(radians) * (r + 0.18)), yOuter = (float)(sin(radians) * (r + 0.18));
+        Drawable* needleOuter = canvas.rectfill(xOuter, yOuter, nl, linewidth);
+
         needle->rotation = degree;
+        needleOuter->rotation = degree;
     }
 
     canvas.setColor(255, 0, 0, 255);
@@ -217,7 +190,6 @@ void android_main(struct android_app* state) {
     state->activity->vm->AttachCurrentThread(&env, NULL);
 
     jclass activityClz = env->GetObjectClass(state->activity->clazz);
-    //jmethodID metIdRead =  env->GetMethodID(activityClz, "read", "([F[F[F)V");
     jmethodID metIdShowUi =  env->GetMethodID(activityClz, "showUi", "()V");
     jmethodID metIdSetDegree =  env->GetMethodID(activityClz, "setDegree", "(F)V");
     jmethodID metIdGetLayoutHeight =  env->GetMethodID(activityClz, "getLayoutHeight", "()F");
@@ -226,7 +198,6 @@ void android_main(struct android_app* state) {
     container.animating = false;
     container.compassSensor = NULL;
     container.env = env;
-    container.activityClz = activityClz;
     container.metIdShowUi = metIdShowUi;
 
     container.app = state;
@@ -238,15 +209,9 @@ void android_main(struct android_app* state) {
 
     enableSensor(&container);
 
-    //jfloatArray jsmoothAccel = env->NewFloatArray(3);
-    //jfloatArray jsmoothMag = env->NewFloatArray(3);
-    //jfloatArray jorientation = env->NewFloatArray(3);
-
 
     state->userData = &container;
     state->onAppCmd = engine_handle_cmd;
-
-    //float layoutHeight = 0;
 
     int fps = 0;
 
@@ -284,27 +249,14 @@ void android_main(struct android_app* state) {
                         }
 
                         float orientation[] = {0, 0, 0};
-                        //float* orientation;
-
                         getOrientation2(accelFilter.smooth, magFilter.smooth, orientation);
-
-                        //env->SetFloatArrayRegion(jsmoothAccel, 0, 3, accelFilter.smooth);
-                        //env->SetFloatArrayRegion(jsmoothMag, 0, 3, magFilter.smooth);
-                        //
-                        //env->CallVoidMethod(state->activity->clazz, metIdRead, jsmoothAccel, jsmoothMag, jorientation);
-                        //env->GetFloatArrayRegion(jorientation, 0, 3, orientation);
-                        ////orientation = env->GetFloatArrayElements(jorientation, 0);
 
                         if (compass != NULL) {
                             float ori[3];
                             for (int i = 0; i < 3; i++)
                                 ori[i] = orientation[i] * 180 / M_PI;
-                            //oriFilter.add(ori);
-                            //env->CallVoidMethod(state->activity->clazz, metIdSetDegree, oriFilter.smooth[0]);
                             env->CallVoidMethod(state->activity->clazz, metIdSetDegree, roundf(ori[0] * 2) / 2);
-                            //env->CallVoidMethod(state->activity->clazz, metIdSetDegree, roundf(oriFilter.smooth[0] * 2) / 2);
                             compass->rotation = ori[0];
-                            //compass->rotation = oriFilter.smooth[0];
                         }
 
                         if (secDiff != prevSecDiff) {
@@ -354,10 +306,6 @@ void android_main(struct android_app* state) {
 
         prevSecDiff = secDiff;
     }
-
-    //env->DeleteLocalRef(jsmoothAccel);
-    //env->DeleteLocalRef(jsmoothMag);
-    //env->DeleteLocalRef(jorientation);
 
     state->activity->vm->DetachCurrentThread();
 

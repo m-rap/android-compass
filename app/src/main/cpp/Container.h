@@ -20,8 +20,6 @@
 #define LOGI(...) (printf(__VA_ARGS__))
 
 #endif
-//#include <cairo.h>
-//#include <cairo-gl.h>
 
 #include "Canvas.h"
 
@@ -30,9 +28,6 @@ struct Container {
     EGLSurface surface;
     EGLContext context;
     EGLDisplay display;
-//    cairo_device_t* cdt;
-//    cairo_surface_t* crSurface;
-//    cairo_t* cr;
     android_app* app;
     bool running;
     bool animating;
@@ -40,7 +35,6 @@ struct Container {
     Canvas canvas;
 
     JNIEnv* env = NULL;
-    jclass activityClz;
     jmethodID metIdShowUi;
 
     ASensorManager* sensorManager;
@@ -53,24 +47,6 @@ struct Container {
 
     void draw();
 };
-
-
-//struct Container {
-//    EGLint width, height;
-//    EGLSurface surface;
-//    EGLContext context;
-//    EGLDisplay display;
-//    cairo_device_t* cdt;
-//    cairo_surface_t* crSurface;
-//    cairo_t* cr;
-//    android_app* app;
-//    bool running;
-//    bool animating;
-//};
-//
-//
-//int initEgl(Container& container1);
-//int deinitEgl(Container& container1);
 
 
 #endif //COMPASS_CONTAINER_H
