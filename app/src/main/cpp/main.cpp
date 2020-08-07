@@ -3,6 +3,7 @@
 //
 
 #include "Container.h"
+#include "MatHelper.h"
 #include <string.h>
 #include <dlfcn.h>
 
@@ -216,7 +217,7 @@ void android_main(struct android_app* state) {
     state->activity->vm->AttachCurrentThread(&env, NULL);
 
     jclass activityClz = env->GetObjectClass(state->activity->clazz);
-    jmethodID metIdRead =  env->GetMethodID(activityClz, "read", "([F[F[F)V");
+    //jmethodID metIdRead =  env->GetMethodID(activityClz, "read", "([F[F[F)V");
     jmethodID metIdShowUi =  env->GetMethodID(activityClz, "showUi", "()V");
     jmethodID metIdSetDegree =  env->GetMethodID(activityClz, "setDegree", "(F)V");
     jmethodID metIdGetLayoutHeight =  env->GetMethodID(activityClz, "getLayoutHeight", "()F");
@@ -237,9 +238,9 @@ void android_main(struct android_app* state) {
 
     enableSensor(&container);
 
-    jfloatArray jsmoothAccel = env->NewFloatArray(3);
-    jfloatArray jsmoothMag = env->NewFloatArray(3);
-    jfloatArray jorientation = env->NewFloatArray(3);
+    //jfloatArray jsmoothAccel = env->NewFloatArray(3);
+    //jfloatArray jsmoothMag = env->NewFloatArray(3);
+    //jfloatArray jorientation = env->NewFloatArray(3);
 
 
     state->userData = &container;
@@ -282,15 +283,17 @@ void android_main(struct android_app* state) {
                             magFilter.add(event.magnetic.v);
                         }
 
-                        env->SetFloatArrayRegion(jsmoothAccel, 0, 3, accelFilter.smooth);
-                        env->SetFloatArrayRegion(jsmoothMag, 0, 3, magFilter.smooth);
+                        float orientation[] = {0, 0, 0};
+                        //float* orientation;
 
-                        //float orientation[] = {0, 0, 0};
-                        float* orientation;
+                        getOrientation2(accelFilter.smooth, magFilter.smooth, orientation);
 
-                        env->CallVoidMethod(state->activity->clazz, metIdRead, jsmoothAccel, jsmoothMag, jorientation);
+                        //env->SetFloatArrayRegion(jsmoothAccel, 0, 3, accelFilter.smooth);
+                        //env->SetFloatArrayRegion(jsmoothMag, 0, 3, magFilter.smooth);
+                        //
+                        //env->CallVoidMethod(state->activity->clazz, metIdRead, jsmoothAccel, jsmoothMag, jorientation);
                         //env->GetFloatArrayRegion(jorientation, 0, 3, orientation);
-                        orientation = env->GetFloatArrayElements(jorientation, 0);
+                        ////orientation = env->GetFloatArrayElements(jorientation, 0);
 
                         if (compass != NULL) {
                             float ori[3];
@@ -352,9 +355,9 @@ void android_main(struct android_app* state) {
         prevSecDiff = secDiff;
     }
 
-    env->DeleteLocalRef(jsmoothAccel);
-    env->DeleteLocalRef(jsmoothMag);
-    env->DeleteLocalRef(jorientation);
+    //env->DeleteLocalRef(jsmoothAccel);
+    //env->DeleteLocalRef(jsmoothMag);
+    //env->DeleteLocalRef(jorientation);
 
     state->activity->vm->DetachCurrentThread();
 

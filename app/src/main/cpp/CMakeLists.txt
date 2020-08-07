@@ -120,6 +120,7 @@ add_library(main
         main.cpp
         Canvas.cpp
         Container.cpp
+        MatHelper.c
         ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c)
 
 target_include_directories(main PUBLIC
