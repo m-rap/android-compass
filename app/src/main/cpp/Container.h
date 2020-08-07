@@ -33,6 +33,7 @@ struct Container {
     bool animating;
 
     Canvas canvas;
+    float s1px;
 
     JNIEnv* env = NULL;
     jmethodID metIdShowUi;

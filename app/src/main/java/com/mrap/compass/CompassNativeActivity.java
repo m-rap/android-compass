@@ -22,6 +22,7 @@ public class CompassNativeActivity extends NativeActivity {
     TextView txtDegree;
     PopupWindow popupWindow = null;
     float degree = 0;
+    float drawnDegree = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,7 +47,7 @@ public class CompassNativeActivity extends NativeActivity {
                 that.setContentView(layout, lp);
 
                 txtDegree = new TextView(that);
-                txtDegree.setTextSize(TypedValue.COMPLEX_UNIT_PT, 20);
+                txtDegree.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
                 txtDegree.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
                 txtDegree.setText("0");
                 txtDegree.setTextColor(Color.parseColor("#ffffffff"));
@@ -77,6 +78,9 @@ public class CompassNativeActivity extends NativeActivity {
                 clp.addRule(RelativeLayout.CENTER_IN_PARENT);
                 clp.width = (int)(0.7 * displayMetrics.widthPixels);
                 clp.height = (int)(0.7 * displayMetrics.widthPixels);
+                //compassLayout.setBackgroundColor(Color.parseColor("#aa00ff00"));
+                //final RelativeLayout compassInnerLayout = (RelativeLayout)compassLayout.getChildAt(0);
+                //compassInnerLayout.setBackgroundColor(Color.parseColor("#aaff0000"));
                 innerLayout.addView(compassLayout);
 
                 popupWindow = new PopupWindow(innerLayout, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
@@ -92,11 +96,16 @@ public class CompassNativeActivity extends NativeActivity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
+                    drawnDegree = degree1;
                     compassLayout.getChildAt(0).setRotation(-degree1);
                     txtDegree.setText(String.format("%.1f", degree));
                 }
             });
         }
+    }
+
+    public float getDrawnDegree() {
+        return drawnDegree;
     }
 
     public float getLayoutHeight() {

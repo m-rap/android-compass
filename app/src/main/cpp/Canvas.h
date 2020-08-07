@@ -86,6 +86,7 @@ struct Canvas {
 
     float width, height;
     float small, big;
+    float alalay = 0;
 
     void resize(int w, int h);
 

@@ -7,7 +7,6 @@
 #include <string.h>
 #include <dlfcn.h>
 
-//const int navg = 60;
 float alpha = 0.05;
 
 struct Filter {
@@ -27,10 +26,14 @@ Container container;
 
 void constructDraw(Container* container1) {
     Drawable& canvas = *(Drawable*)&container1->canvas;
-    float s1px = 1 / ((Canvas*)&canvas)->small;
+    container.s1px = 1 / ((Canvas*)&canvas)->small;
+    float s1px = container.s1px;
     //float linewidth = 10 * s1px;
     float linewidth = 0.01;
     LOGI("s1px %f linewidth %f", s1px, linewidth);
+
+    canvas.setColor(50, 50, 50, 255);
+    canvas.circlefill(0, 0, 0.83);
 
     compass = canvas.addchild();
     canvas.setColor(255, 255, 255, 255);
@@ -39,7 +42,7 @@ void constructDraw(Container* container1) {
     Drawable* circ2 = compass->circlefill(0, 0, 0.7 - linewidth);
     canvas.setColor(255, 255, 255, 255);
 
-    float needleLength = 0.07;
+    float needleLength = 0.05;
     //float needleRadius = 0.7 - 35 * s1px;
     float needleRadius = 0.7 - needleLength / 2;
 
@@ -49,8 +52,8 @@ void constructDraw(Container* container1) {
         float nl;
         //if (degree % 90 == 0) {
         if (degree % 45 == 0) {
-            nl = needleLength + 0.07;
-            r = needleRadius - 0.035;
+            nl = needleLength + 0.04;
+            r = needleRadius - 0.02;
         } else if (degree % 5 == 0 && degree % 10 != 0) {
             nl = needleLength - 0.02;
             r = needleRadius + 0.01;
@@ -62,8 +65,14 @@ void constructDraw(Container* container1) {
         float x = (float)(cos(radians) * r), y = (float)(sin(radians) * r);
         Drawable* needle = compass->rectfill(x, y, nl, linewidth);
 
-        float xOuter = (float)(cos(radians) * (r + 0.18)), yOuter = (float)(sin(radians) * (r + 0.18));
+        if (degree == 90) {
+            canvas.setColor(10, 200, 10, 255);
+        }
+        float xOuter = (float)(cos(radians) * (r + 0.11)), yOuter = (float)(sin(radians) * (r + 0.11));
         Drawable* needleOuter = canvas.rectfill(xOuter, yOuter, nl, linewidth);
+        if (degree == 90) {
+            canvas.setColor(255, 255, 255, 255);
+        }
 
         needle->rotation = degree;
         needleOuter->rotation = degree;
@@ -71,12 +80,15 @@ void constructDraw(Container* container1) {
 
     canvas.setColor(255, 0, 0, 255);
     Drawable* hand = compass->addchild();
-    float handRadius = 0.7 - 0.2;
+    float handHeight = 0.1;
+    float handWidth = 0.08;
+    float handRadius = 0.7 - 0.25;
+
     hand->vtxBuffer = (Vertex2*)malloc(sizeof(Vertex2) * 3);
     hand->idxBuffer = (GLushort *)malloc(sizeof(GLushort) * 3);
     hand->addVtx(0, handRadius);
-    hand->addVtx(50 * s1px, handRadius - 100 * s1px);
-    hand->addVtx(-50 * s1px, handRadius - 100 * s1px);
+    hand->addVtx(handWidth / 2, handRadius - handHeight);
+    hand->addVtx(-handWidth / 2, handRadius - handHeight);
     //hand->addVtx(0, -handRadius);
     int tr1[] = {0, 2, 1};
     //int tr2[] = {1, 2, 3};
@@ -193,12 +205,14 @@ void android_main(struct android_app* state) {
     jmethodID metIdShowUi =  env->GetMethodID(activityClz, "showUi", "()V");
     jmethodID metIdSetDegree =  env->GetMethodID(activityClz, "setDegree", "(FF)V");
     jmethodID metIdGetLayoutHeight =  env->GetMethodID(activityClz, "getLayoutHeight", "()F");
+    jmethodID metIdGetDrawnDegree =  env->GetMethodID(activityClz, "getDrawnDegree", "()F");
 
     container.running = false;
     container.animating = false;
     container.compassSensor = NULL;
     container.env = env;
     container.metIdShowUi = metIdShowUi;
+    container.s1px = 0;
 
     container.app = state;
     container.sensorManager = aquireASensorManagerInstance(state, env);
@@ -263,7 +277,6 @@ void android_main(struct android_app* state) {
                                 }
                             }
                             env->CallVoidMethod(state->activity->clazz, metIdSetDegree, roundf(ori[0] * 2) / 2, ori[0]);
-                            compass->rotation = ori[0];
                         }
 
                         if (secDiff != prevSecDiff) {
@@ -299,13 +312,14 @@ void android_main(struct android_app* state) {
 
         if (container.running && container.animating) {
             //if (layoutHeight == 0) {
-            if (container.canvas.height == container.height) {
+            //if (container.canvas.height == container.height) {
                 float layoutHeight = env->CallFloatMethod(state->activity->clazz, metIdGetLayoutHeight);
-                if (layoutHeight != 0) {
+                if (layoutHeight != 0 && container.s1px != 0) {
                     //float barH = container.height - layoutHeight;
                     container.canvas.resize(container.width, layoutHeight);
                 }
-            }
+            //}
+            compass->rotation = env->CallFloatMethod(state->activity->clazz, metIdGetDrawnDegree);
             container.draw();
         }
 

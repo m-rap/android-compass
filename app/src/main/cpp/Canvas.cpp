@@ -360,6 +360,9 @@ void Canvas::init() {
 }
 
 void Canvas::resize(int w, int h) {
+    if (width == w && height == h) {
+        return;
+    }
     width = w;
     height = h;
     small = width;
@@ -368,8 +371,17 @@ void Canvas::resize(int w, int h) {
         small = height;
         big = width;
     }
-    LOGI("barH %f", height - big);
-    glViewport(0, big/4 - (container->height - big), small, small);
+    //glViewport(0, big/4 - (container->height - big) - (0.005 * small), small, small);
+    //glViewport(0, big/4 - (container->height - big), small, small);
+    //glViewport(0, big/4 - (container->height - big) - (0.023 * small), small, small);
+    //glViewport(0, big/4, small, small);
+    //glViewport(0, alalay, small, small);
+    //glViewport(0, big - small, small, small);
+    //glViewport(0, container->height / 4 + container->s1px * (container->height - big), small, small);
+    //glViewport(0, container->height / 4, small, small);
+    glViewport(0, big / 2 - small / 2, small, small);
+    //LOGI("layout height %f %f %f", big, big/4, alalay);
+    //alalay += 0.1;
 }
 
 void Canvas::deinit() {
