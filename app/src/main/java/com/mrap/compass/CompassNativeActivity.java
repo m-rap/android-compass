@@ -4,8 +4,10 @@ import android.app.Activity;
 import android.app.NativeActivity;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.PopupWindow;
@@ -15,6 +17,8 @@ import android.widget.TextView;
 public class CompassNativeActivity extends NativeActivity {
 
     RelativeLayout layout = null;
+    RelativeLayout innerLayout = null;
+    RelativeLayout compassLayout = null;
     TextView txtDegree;
     PopupWindow popupWindow = null;
     float degree = 0;
@@ -28,7 +32,7 @@ public class CompassNativeActivity extends NativeActivity {
     }
 
     public void showUi() {
-        if (popupWindow != null) {
+        if (layout != null) {
             return;
         }
 
@@ -38,30 +42,57 @@ public class CompassNativeActivity extends NativeActivity {
             public void run() {
                 layout = new RelativeLayout(that);
 
-                ViewGroup.MarginLayoutParams mlp = new ViewGroup.MarginLayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-                that.setContentView(layout, mlp);
+                ViewGroup.LayoutParams lp = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+                that.setContentView(layout, lp);
 
                 txtDegree = new TextView(that);
                 txtDegree.setTextSize(TypedValue.COMPLEX_UNIT_PT, 20);
                 txtDegree.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
                 txtDegree.setText("0");
                 txtDegree.setTextColor(Color.parseColor("#ffffffff"));
-                txtDegree.invalidate();
+                final RelativeLayout.LayoutParams txtLp = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                txtLp.addRule(RelativeLayout.CENTER_IN_PARENT);
+                txtDegree.setLayoutParams(txtLp);
+
+                innerLayout = new RelativeLayout(that);
+                innerLayout.setLayoutParams(new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                innerLayout.addView(txtDegree);
+                //innerLayout.setBackgroundColor(Color.parseColor("#AAFF0000"));
+
+                //innerLayout.post(new Runnable() {
+                //    @Override
+                //    public void run() {
+                //        System.out.println("innerlayout "+ innerLayout.getHeight() + " " + layout.getHeight() + " " + txtLp.getMarginStart() + " " + txtLp.topMargin);
+                //    }
+                //});
+
+                DisplayMetrics displayMetrics = new DisplayMetrics();
+                getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+
+                LayoutInflater layoutInflater = (LayoutInflater)getBaseContext().getSystemService(LAYOUT_INFLATER_SERVICE);
 
 
+                compassLayout = (RelativeLayout)layoutInflater.inflate(R.layout.compass_text_widget, innerLayout, false);
+                RelativeLayout.LayoutParams clp = ((RelativeLayout.LayoutParams)compassLayout.getLayoutParams());
+                clp.addRule(RelativeLayout.CENTER_IN_PARENT);
+                clp.width = (int)(0.7 * displayMetrics.widthPixels);
+                clp.height = (int)(0.7 * displayMetrics.widthPixels);
+                innerLayout.addView(compassLayout);
 
-                popupWindow = new PopupWindow(txtDegree, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                popupWindow.showAtLocation(layout, Gravity.CENTER, 0, 0);
+                popupWindow = new PopupWindow(innerLayout, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+                //popupWindow.showAtLocation(layout, Gravity.CENTER, 0, 0);
+                popupWindow.showAtLocation(layout, Gravity.TOP | Gravity.START, 0, 0);
             }
         });
     }
 
-    public void setDegree(float degree1) {
-        this.degree = degree1;
+    public void setDegree(final float degree1Smooth, final float degree1) {
+        this.degree = degree1Smooth;
         if (txtDegree != null) {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
+                    compassLayout.getChildAt(0).setRotation(-degree1);
                     txtDegree.setText(String.format("%.1f", degree));
                 }
             });

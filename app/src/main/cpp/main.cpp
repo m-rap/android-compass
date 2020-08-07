@@ -191,7 +191,7 @@ void android_main(struct android_app* state) {
 
     jclass activityClz = env->GetObjectClass(state->activity->clazz);
     jmethodID metIdShowUi =  env->GetMethodID(activityClz, "showUi", "()V");
-    jmethodID metIdSetDegree =  env->GetMethodID(activityClz, "setDegree", "(F)V");
+    jmethodID metIdSetDegree =  env->GetMethodID(activityClz, "setDegree", "(FF)V");
     jmethodID metIdGetLayoutHeight =  env->GetMethodID(activityClz, "getLayoutHeight", "()F");
 
     container.running = false;
@@ -253,9 +253,16 @@ void android_main(struct android_app* state) {
 
                         if (compass != NULL) {
                             float ori[3];
-                            for (int i = 0; i < 3; i++)
+                            for (int i = 0; i < 3; i++) {
                                 ori[i] = orientation[i] * 180 / M_PI;
-                            env->CallVoidMethod(state->activity->clazz, metIdSetDegree, roundf(ori[0] * 2) / 2);
+                                while (ori[i] < 0) {
+                                    ori[i] += 360;
+                                }
+                                while (ori[i] >= 360) {
+                                    ori[i] -= 360;
+                                }
+                            }
+                            env->CallVoidMethod(state->activity->clazz, metIdSetDegree, roundf(ori[0] * 2) / 2, ori[0]);
                             compass->rotation = ori[0];
                         }
 

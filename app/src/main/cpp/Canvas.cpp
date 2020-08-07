@@ -369,7 +369,7 @@ void Canvas::resize(int w, int h) {
         big = width;
     }
     LOGI("barH %f", height - big);
-    glViewport(0, big/4 - (container->height - big) / 2, small, small);
+    glViewport(0, big/4 - (container->height - big), small, small);
 }
 
 void Canvas::deinit() {
