@@ -109,7 +109,7 @@ public class CompassNativeActivity extends NativeActivity {
     }
 
     public void getLayoutDimension(int[] dimensions) {
-        System.out.println(dimensions.length);
+        //System.out.println(dimensions.length);
         if (layout == null) {
             System.out.println("layout null");
             for (int i = 0; i < dimensions.length; i++) {
