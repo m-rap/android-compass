@@ -108,9 +108,22 @@ public class CompassNativeActivity extends NativeActivity {
         return drawnDegree;
     }
 
-    public float getLayoutHeight() {
-        if (layout == null)
-            return 0;
-        return layout.getHeight();
+    public void getLayoutDimension(int[] dimensions) {
+        System.out.println(dimensions.length);
+        if (layout == null) {
+            System.out.println("layout null");
+            for (int i = 0; i < dimensions.length; i++) {
+                dimensions[i] = 0;
+            }
+            return;
+        }
+        layout.getLocationOnScreen(dimensions);
+        dimensions[2] = layout.getWidth();
+        dimensions[3] = layout.getHeight();
+        //System.out.println(String.format("java layout %d %d %d %d",
+        //        dimensions[0],
+        //        dimensions[1],
+        //        dimensions[2],
+        //        dimensions[3]));
     }
 }

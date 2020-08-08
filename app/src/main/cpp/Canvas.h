@@ -84,11 +84,11 @@ struct Canvas {
 
     Container* container;
 
-    float width, height;
+    float xscreen, yscreen, width, height;
     float small, big;
     float alalay = 0;
 
-    void resize(int w, int h);
+    void resize(int xscreen, int yscreen, int w, int h);
 
     void init();
     void deinit();

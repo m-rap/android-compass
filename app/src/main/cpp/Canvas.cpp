@@ -359,10 +359,18 @@ void Canvas::init() {
     glDisable(GL_DEPTH_TEST);
 }
 
-void Canvas::resize(int w, int h) {
-    if (width == w && height == h) {
+void Canvas::resize(int xscreen1, int yscreen1, int w, int h) {
+    //LOGI("layout %f %f %f %f", xscreen, yscreen, width, height);
+    //LOGI("viewport %f %f %f %f", xscreen, yscreen + big / 2 - small / 2, small, small);
+    if (xscreen == (float)xscreen1 &&
+        yscreen == (float)yscreen1 &&
+        width   == (float)w &&
+        height  == (float)h) {
+        //LOGI("layout same");
         return;
     }
+    xscreen = xscreen1;
+    yscreen = yscreen1;
     width = w;
     height = h;
     small = width;
@@ -379,8 +387,8 @@ void Canvas::resize(int w, int h) {
     //glViewport(0, big - small, small, small);
     //glViewport(0, container->height / 4 + container->s1px * (container->height - big), small, small);
     //glViewport(0, container->height / 4, small, small);
-    glViewport(0, big / 2 - small / 2, small, small);
-    //LOGI("layout height %f %f %f", big, big/4, alalay);
+    //glViewport(xscreen, yscreen + big / 2 - small / 2, small, small);
+    glViewport(xscreen, big / 2 - small / 2 + (container->height - big - yscreen), small, small);
     //alalay += 0.1;
 }
 

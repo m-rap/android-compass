@@ -204,7 +204,7 @@ void android_main(struct android_app* state) {
     jclass activityClz = env->GetObjectClass(state->activity->clazz);
     jmethodID metIdShowUi =  env->GetMethodID(activityClz, "showUi", "()V");
     jmethodID metIdSetDegree =  env->GetMethodID(activityClz, "setDegree", "(FF)V");
-    jmethodID metIdGetLayoutHeight =  env->GetMethodID(activityClz, "getLayoutHeight", "()F");
+    jmethodID metIdGetLayoutHeight =  env->GetMethodID(activityClz, "getLayoutDimension", "([I)V");
     jmethodID metIdGetDrawnDegree =  env->GetMethodID(activityClz, "getDrawnDegree", "()F");
 
     container.running = false;
@@ -223,9 +223,10 @@ void android_main(struct android_app* state) {
 
     enableSensor(&container);
 
-
     state->userData = &container;
     state->onAppCmd = engine_handle_cmd;
+
+    jintArray jdimensions = env->NewIntArray(4);
 
     int fps = 0;
 
@@ -311,13 +312,16 @@ void android_main(struct android_app* state) {
         }
 
         if (container.running && container.animating) {
-            //if (layoutHeight == 0) {
+            //if (jdimensions == 0) {
             //if (container.canvas.height == container.height) {
-                float layoutHeight = env->CallFloatMethod(state->activity->clazz, metIdGetLayoutHeight);
-                if (layoutHeight != 0 && container.s1px != 0) {
-                    //float barH = container.height - layoutHeight;
-                    container.canvas.resize(container.width, layoutHeight);
-                }
+            env->CallVoidMethod(state->activity->clazz, metIdGetLayoutHeight, jdimensions);
+            int* dimensions = env->GetIntArrayElements(jdimensions, 0);
+            //LOGI("layout %d %d %d %d", dimensions[0], dimensions[1], dimensions[2], dimensions[3]);
+            //if (dimensions[3] != 0 && container.s1px != 0) {
+                //float barH = container.height - jdimensions;
+                //container.canvas.resize(container.width, dimensions[3]);
+                container.canvas.resize(dimensions[0], dimensions[1], dimensions[2], dimensions[3]);
+            //}
             //}
             compass->rotation = env->CallFloatMethod(state->activity->clazz, metIdGetDrawnDegree);
             container.draw();
@@ -327,6 +331,8 @@ void android_main(struct android_app* state) {
 
         prevSecDiff = secDiff;
     }
+
+    env->DeleteLocalRef(jdimensions);
 
     state->activity->vm->DetachCurrentThread();
 

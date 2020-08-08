@@ -91,7 +91,7 @@ int Container::initEgl() {
 
     canvas.container = this;
     canvas.init();
-    canvas.resize(w, h);
+    canvas.resize(0, 0, w, h);
 
     running = true;
 
