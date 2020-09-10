@@ -16,6 +16,7 @@ android {
                 //arguments "-DANDROID_ALLOW_UNDEFINED_SYMBOLS=TRUE"
                 //cppFlags "-std=c++17"
                 //cppFlags ""
+                arguments "-DANDROID_STL=system"
             }
         }
     }
@@ -42,8 +43,8 @@ android {
         abi {
             enable true
             reset()
-            include "x86", "x86_64", "armeabi-v7a", "arm64-v8a"
-            //include "arm64-v8a"
+            //include "x86", "x86_64", "armeabi-v7a", "arm64-v8a"
+            include "x86", "arm64-v8a"
             //include "x86"
             //include "x86", "arm64-v8a"
             universalApk false

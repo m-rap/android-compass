@@ -6,6 +6,7 @@
 #include "MatHelper.h"
 #include <string.h>
 #include <dlfcn.h>
+#include <stdlib.h>
 
 float alpha = 0.05;
 

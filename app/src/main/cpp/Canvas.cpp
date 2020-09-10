@@ -3,8 +3,9 @@
 //
 
 #include "Canvas.h"
-#include <math.h>
 #include "Container.h"
+#include <math.h>
+#include <stdlib.h>
 
 
 Drawable* drawablePool;
@@ -390,6 +391,7 @@ void Canvas::resize(int xscreen1, int yscreen1, int w, int h) {
     //glViewport(xscreen, yscreen + big / 2 - small / 2, small, small);
     glViewport(xscreen, big / 2 - small / 2 + (container->height - big - yscreen), small, small);
     //alalay += 0.1;
+    LOGI("layout changed %f %f %f %f", xscreen, big / 2 - small / 2 + (container->height - big - yscreen), small, small);
 }
 
 void Canvas::deinit() {
